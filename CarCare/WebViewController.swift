@@ -1,7 +1,5 @@
 import UIKit
 import WebKit
-import PhotosUI
-import UniformTypeIdentifiers
 import UserNotifications
 
 /// 车管家 iOS 版：原生外壳 + WKWebView（内置同一套页面）+ 原生能力桥接
@@ -9,7 +7,6 @@ final class WebViewController: UIViewController {
 
     private var webView: WKWebView!
     private var server: LocalHTTPServer?
-    private var uploadCompletion: (([URL]?) -> Void)?
 
     private static let portKey = "carcare_local_port"
 
@@ -206,70 +203,6 @@ final class WebViewController: UIViewController {
         }
     }
 
-    private func saveTempImage(_ image: UIImage) -> URL? {
-        guard let data = image.jpegData(compressionQuality: 0.92) else { return nil }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("upload_\(UUID().uuidString).jpg")
-        do {
-            try data.write(to: url, options: .atomic)
-            return url
-        } catch {
-            return nil
-        }
-    }
-
-    private func finishUpload(_ urls: [URL]?) {
-        let callback = uploadCompletion
-        uploadCompletion = nil
-        callback?(urls)
-    }
-
-    private func showImageSourceOptions() {
-        let sheet = UIAlertController(title: "选择凭证图片", message: nil, preferredStyle: .actionSheet)
-        sheet.addAction(UIAlertAction(title: "从相册选择", style: .default) { [weak self] _ in
-            self?.presentPhotoLibrary()
-        })
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            sheet.addAction(UIAlertAction(title: "拍照", style: .default) { [weak self] _ in
-                self?.presentCamera()
-            })
-        }
-        sheet.addAction(UIAlertAction(title: "从「文件」选择", style: .default) { [weak self] _ in
-            self?.presentDocumentPicker()
-        })
-        sheet.addAction(UIAlertAction(title: "取消", style: .cancel) { [weak self] _ in
-            self?.finishUpload(nil)
-        })
-        if let pop = sheet.popoverPresentationController {
-            pop.sourceView = view
-            pop.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.maxY - 60, width: 1, height: 1)
-        }
-        present(sheet, animated: true, completion: nil)
-    }
-
-    private func presentPhotoLibrary() {
-        var config = PHPickerConfiguration(photoLibrary: .shared())
-        config.filter = .images
-        config.selectionLimit = 1
-        let picker = PHPickerViewController(configuration: config)
-        picker.delegate = self
-        present(picker, animated: true, completion: nil)
-    }
-
-    private func presentCamera() {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.delegate = self
-        present(picker, animated: true, completion: nil)
-    }
-
-    private func presentDocumentPicker() {
-        let types: [UTType] = [.json, .image, .data]
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
-        picker.delegate = self
-        picker.allowsMultipleSelection = false
-        present(picker, animated: true, completion: nil)
-    }
 }
 
 // MARK: - 网页桥接
@@ -397,26 +330,6 @@ extension WebViewController: WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView,
-                 runOpenPanelWith parameters: WKOpenPanelParameters,
-                 initiatedByFrame frame: WKFrameInfo,
-                 completionHandler: @escaping ([URL]?) -> Void) {
-        if uploadCompletion != nil {
-            completionHandler(nil)
-            return
-        }
-        uploadCompletion = completionHandler
-
-        let acceptsImage = parameters.allowedMIMETypes.isEmpty
-            || parameters.allowedMIMETypes.contains { $0.lowercased().hasPrefix("image") }
-
-        if acceptsImage {
-            showImageSourceOptions()
-        } else {
-            presentDocumentPicker()
-        }
-    }
-
-    func webView(_ webView: WKWebView,
                  createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction,
                  windowFeatures: WKWindowFeatures) -> WKWebView? {
@@ -426,59 +339,5 @@ extension WebViewController: WKUIDelegate {
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
         return nil
-    }
-}
-
-// MARK: - 图片选择
-
-extension WebViewController: PHPickerViewControllerDelegate {
-
-    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
-        picker.dismiss(animated: true, completion: nil)
-        guard let provider = results.first?.itemProvider,
-              provider.canLoadObject(ofClass: UIImage.self) else {
-            finishUpload(nil)
-            return
-        }
-        provider.loadObject(ofClass: UIImage.self) { [weak self] object, _ in
-            guard let self = self else { return }
-            let image = object as? UIImage
-            DispatchQueue.main.async {
-                if let image = image, let url = self.saveTempImage(image) {
-                    self.finishUpload([url])
-                } else {
-                    self.finishUpload(nil)
-                }
-            }
-        }
-    }
-}
-
-extension WebViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-
-    func imagePickerController(_ picker: UIImagePickerController,
-                               didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-        picker.dismiss(animated: true, completion: nil)
-        if let image = info[.originalImage] as? UIImage, let url = saveTempImage(image) {
-            finishUpload([url])
-        } else {
-            finishUpload(nil)
-        }
-    }
-
-    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-        picker.dismiss(animated: true, completion: nil)
-        finishUpload(nil)
-    }
-}
-
-extension WebViewController: UIDocumentPickerDelegate {
-
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        finishUpload(urls.isEmpty ? nil : urls)
-    }
-
-    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        finishUpload(nil)
     }
 }

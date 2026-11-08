@@ -21,7 +21,7 @@
 | --- | --- |
 | `localStorage` 持久化 | 内置本机 HTTP 服务（`http://127.0.0.1:48700`）提供正常同源环境，数据存于 WebKit 持久化存储 |
 | `confirm` / `alert` / `prompt` | 原生 `UIAlertController`，文案与网页一致 |
-| 收据 / 发票凭证上传 | 相册、相机、文件三选一（`PHPicker` / `UIImagePickerController` / `UIDocumentPicker`） |
+| 收据 / 发票凭证上传、导入备份 | WKWebView 原生文件选择面板（相册 / 拍照 / 「文件」），与 Safari 行为一致 |
 | 导出 CSV | 截获 `blob:` 下载，写文件后调起系统分享（存到「文件」、发微信、AirDrop 等） |
 | 导出 PDF | 离屏渲染生成 PDF，调起系统分享 |
 | 查看凭证大图 | 原生全屏图片查看器，可保存 / 分享 |
