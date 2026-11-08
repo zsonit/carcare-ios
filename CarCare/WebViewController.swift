@@ -334,6 +334,150 @@ final class WebViewController: UIViewController {
         return String(json.dropFirst().dropLast())
     }
 
+    // MARK: - AI 对话按住说话（按住识别、松开把文字交给网页发问）
+
+    private var holdActive = false
+    private var holdAwaitingFinal = false
+    private var holdLastText = ""
+    private var holdTimer: DispatchWorkItem?
+    private var holdFinalTimer: DispatchWorkItem?
+
+    private static func callHold(_ webView: WKWebView?, _ js: String) {
+        DispatchQueue.main.async {
+            webView?.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+
+    private func startVoiceHold() {
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            guard let self = self else { return }
+            guard status == .authorized else {
+                DispatchQueue.main.async { self.failVoiceHold("请在系统设置里允许「语音识别」") }
+                return
+            }
+            AVAudioSession.sharedInstance().requestRecordPermission { ok in
+                guard ok else {
+                    DispatchQueue.main.async { self.failVoiceHold("请在系统设置里允许「麦克风」") }
+                    return
+                }
+                DispatchQueue.main.async { self.beginVoiceHold() }
+            }
+        }
+    }
+
+    private func beginVoiceHold() {
+        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+            failVoiceHold("语音识别暂不可用")
+            return
+        }
+        stopVoice()
+        holdActive = true
+        holdAwaitingFinal = false
+        holdLastText = ""
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            recognitionRequest = request
+
+            let input = audioEngine.inputNode
+            let format = input.outputFormat(forBus: 0)
+            input.removeTap(onBus: 0)
+            input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+                request.append(buffer)
+            }
+            audioEngine.prepare()
+            try audioEngine.start()
+
+            recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                guard let self = self else { return }
+                if let result = result {
+                    let text = result.bestTranscription.formattedString
+                    if !text.isEmpty {
+                        self.holdLastText = text
+                        if self.holdActive {
+                            Self.callHold(self.webView, "ccAiVoicePartial(\(WebViewController.jsLiteral(text)))")
+                        }
+                    }
+                    if result.isFinal {
+                        self.finishVoiceHold(text: text)
+                        return
+                    }
+                }
+                if error != nil {
+                    if self.holdAwaitingFinal {
+                        self.finishVoiceHold(text: self.holdLastText)
+                    } else if self.holdActive {
+                        self.failVoiceHold("识别出错，请再试一次")
+                    }
+                }
+            }
+
+            // 最长 30 秒自动收尾（当作正常松开）
+            let work = DispatchWorkItem { [weak self] in
+                guard let self = self, self.holdActive else { return }
+                self.releaseVoiceHold(cancel: false)
+            }
+            holdTimer = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: work)
+        } catch {
+            failVoiceHold("语音启动失败，请重试")
+        }
+    }
+
+    private func releaseVoiceHold(cancel: Bool) {
+        holdTimer?.cancel()
+        holdTimer = nil
+        guard holdActive else {
+            if cancel { Self.callHold(webView, "ccAiVoiceCancel()") }
+            return
+        }
+        if cancel {
+            holdActive = false
+            stopVoice()
+            Self.callHold(webView, "ccAiVoiceCancel()")
+            return
+        }
+        holdActive = false
+        holdAwaitingFinal = true
+        recognitionRequest?.endAudio()
+        if audioEngine.isRunning { audioEngine.stop() }
+        audioEngine.inputNode.removeTap(onBus: 0)
+        // 3 秒兜底：final 迟迟不返回就用最后的部分结果
+        let fb = DispatchWorkItem { [weak self] in
+            guard let self = self, self.holdAwaitingFinal else { return }
+            self.finishVoiceHold(text: self.holdLastText)
+        }
+        holdFinalTimer = fb
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: fb)
+    }
+
+    private func finishVoiceHold(text: String) {
+        holdFinalTimer?.cancel()
+        holdFinalTimer = nil
+        guard holdActive || holdAwaitingFinal else { return }
+        holdActive = false
+        holdAwaitingFinal = false
+        stopVoice()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        Self.callHold(webView, "ccAiVoiceResult(\(WebViewController.jsLiteral(trimmed)))")
+    }
+
+    private func failVoiceHold(_ reason: String) {
+        holdTimer?.cancel()
+        holdTimer = nil
+        holdFinalTimer?.cancel()
+        holdFinalTimer = nil
+        holdActive = false
+        holdAwaitingFinal = false
+        stopVoice()
+        DispatchQueue.main.async { self.presentToast(reason) }
+        Self.callHold(webView, "ccAiVoiceCancel()")
+    }
+
     private func makePDF(html: String, name: String) {        PDFExporter.shared.makePDF(html: html, host: view) { [weak self] data in
             guard let self = self else { return }
             guard let data = data else {
@@ -392,6 +536,14 @@ extension WebViewController: WKScriptMessageHandler {
 
         case "voice":
             startVoice()
+
+        case "aiVoiceStart":
+            // AI 对话：按住开始说话
+            startVoiceHold()
+
+        case "aiVoiceEnd":
+            // 松开结束；cancel=true 表示上滑取消
+            releaseVoiceHold(cancel: (body["cancel"] as? NSNumber)?.boolValue ?? false)
 
         case "ai":
             // 大模型请求由原生代发（WebView 直连会被 CORS 拦），流式回吐给网页

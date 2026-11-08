@@ -815,7 +815,28 @@
     + '.ai-cfgrow{display:flex;align-items:center;gap:8px;margin-top:7px}'
     + '.ai-cfgrow label{flex:0 0 74px;font-size:12.5px;color:var(--sub,#7c8ba1);font-weight:650}'
     + '.ai-cfgrow input,.ai-cfgrow select{flex:1;min-width:0}'
-    + '.ai-cfgnote{font-size:11.5px;color:var(--sub,#7c8ba1);line-height:1.55;margin-top:8px}';
+    + '.ai-cfgnote{font-size:11.5px;color:var(--sub,#7c8ba1);line-height:1.55;margin-top:8px}'
+    + '.ai-mic{width:44px;height:44px;flex:none;border-radius:50%;border:0;color:#0a6fd8;'
+    + '  display:flex;align-items:center;justify-content:center;background:rgba(10,132,255,.1);'
+    + '  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;'
+    + '  box-shadow:0 2px 8px -6px rgba(16,44,80,.5)}'
+    + '.ai-mic:active{background:rgba(10,132,255,.22)}'
+    + '.ai-mic.hold{color:#fff;background:linear-gradient(180deg,#4aa5ff,#0a84ff)}'
+    + '.ai-mic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;'
+    + '  stroke-linecap:round;stroke-linejoin:round;pointer-events:none}'
+    + '.ai-voiceov{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;'
+    + '  background:rgba(12,26,45,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);'
+    + '  animation:aiIn .18s ease}'
+    + '.ai-voicebox{width:min(76vw,300px);border-radius:24px;background:rgba(255,255,255,.97);'
+    + '  padding:20px 18px 18px;text-align:center;box-shadow:0 24px 60px -24px rgba(16,44,80,.7)}'
+    + '.ai-voicebox .hint{font-size:11.5px;color:#7c8ba1;font-weight:700;letter-spacing:.3px}'
+    + '.ai-voicebox.cancel .hint{color:#e5484d}'
+    + '.ai-wave{display:flex;gap:4px;justify-content:center;align-items:center;height:34px;margin:12px 0 10px}'
+    + '.ai-wave i{width:4px;border-radius:2px;background:linear-gradient(180deg,#4aa5ff,#0a84ff);'
+    + '  transform-origin:center;animation:aiWave .9s ease-in-out infinite}'
+    + '@keyframes aiWave{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}'
+    + '.ai-voicetxt{min-height:40px;font-size:14.5px;line-height:1.5;color:var(--ink,#16233a);'
+    + '  font-weight:600;display:flex;align-items:center;justify-content:center;word-break:break-word}';
 
   function injectStyle() {
     if (document.getElementById('ccAiStyle')) return;
@@ -924,7 +945,7 @@
   /* ------------------------------------------------------------------ *
    * 11. 对话页
    * ------------------------------------------------------------------ */
-  var PAGE = null, scrollEl = null, listEl = null, inputEl = null, sendBtn = null;
+  var PAGE = null, scrollEl = null, listEl = null, inputEl = null, sendBtn = null, micEl = null;
 
   function openAI(tab) {
     injectStyle();
@@ -941,7 +962,11 @@
       + '<div class="ai-bar">'
       + '<div class="ai-chips" id="aiChips"></div>'
       + '<div class="ai-inrow">'
-      + '<textarea class="ai-in" id="aiIn" rows="1" placeholder="问点什么，比如：下次该保养什么？"></textarea>'
+      + '<textarea class="ai-in" id="aiIn" rows="1" placeholder="问点什么，或按住麦克风说话"></textarea>'
+      + '<button class="ai-mic" id="aiMic" aria-label="按住说话">'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/>'
+      + '<path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>'
+      + '</button>'
       + '<button class="ai-send" id="aiSend" onclick="ccAiSend()" aria-label="发送">'
       + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/>'
       + '<path d="M5.6 11.4 12 5l6.4 6.4"/></svg>'
@@ -953,6 +978,7 @@
     listEl = el.querySelector('#aiList');
     inputEl = el.querySelector('#aiIn');
     sendBtn = el.querySelector('#aiSend');
+    micEl = el.querySelector('#aiMic');
 
     injectStyle();
 
@@ -969,15 +995,28 @@
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
     });
 
+    if (micEl) {
+      if (!micSupported()) micEl.style.display = 'none';
+      micEl.addEventListener('pointerdown', startHold);
+      micEl.addEventListener('pointermove', moveHold);
+      micEl.addEventListener('pointerup', endHold);
+      micEl.addEventListener('pointercancel', endHold);
+      micEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    }
+
     renderThread();
     if (tab === 'settings') setTimeout(openCfgSheet, 60);
     setTimeout(function () { if (inputEl && ready()) inputEl.focus(); }, 260);
   }
 
   function closeAI() {
+    if (holdOn) abortHold('');
+    else if (webRec) { try { webRec.abort(); } catch (e) { } webRec = null; }
+    closeVoiceOverlay();
     var el = document.getElementById('aiPage');
     if (el) el.remove();
     PAGE = null;
+    micEl = null;
   }
 
   function nearBottom() {
@@ -1111,6 +1150,163 @@
       localStorage.setItem(STORE, JSON.stringify(o));
     } catch (e) { }
   }
+
+  /* ------------------------------------------------------------------ *
+   * 12.5 按住说话（App 走原生识别；浏览器有 SpeechRecognition 也能用）
+   *   按住 → 实时显示识别文字 → 松开直接发给大模型，上滑取消
+   * ------------------------------------------------------------------ */
+  var voiceOv = null, voiceTxt = null, voiceBox = null;
+  var holdOn = false, holdCancel = false, voiceGen = 0;
+  var webRec = null, webFinal = '';
+
+  function micSupported() {
+    if (window.__ccNative) return true;
+    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  }
+
+  function voiceCleanup() {
+    holdOn = false;
+    holdCancel = false;
+    closeVoiceOverlay();
+    if (micEl) micEl.classList.remove('hold');
+  }
+
+  function openVoiceOverlay() {
+    closeVoiceOverlay();
+    var el = document.createElement('div');
+    el.className = 'ai-voiceov';
+    el.id = 'aiVoiceOv';
+    var bars = '';
+    for (var i = 0; i < 9; i++) bars += '<i style="animation-delay:' + (i * 90) + 'ms"></i>';
+    el.innerHTML = '<div class="ai-voicebox" id="aiVoiceBox">'
+      + '<div class="hint" id="aiVoiceHint">正在听，请说话</div>'
+      + '<div class="ai-wave">' + bars + '</div>'
+      + '<div class="ai-voicetxt" id="aiVoiceTxt">…</div>'
+      + '</div>';
+    document.body.appendChild(el);
+    voiceOv = el;
+    voiceTxt = el.querySelector('#aiVoiceTxt');
+    voiceBox = el.querySelector('#aiVoiceBox');
+  }
+
+  function closeVoiceOverlay() {
+    var el = document.getElementById('aiVoiceOv');
+    if (el) el.remove();
+    voiceOv = null;
+    voiceTxt = null;
+    voiceBox = null;
+  }
+
+  function setPartial(t) {
+    if (voiceTxt) voiceTxt.textContent = t || '…';
+  }
+
+  function abortHold(msg) {
+    voiceCleanup();
+    if (window.__ccNative) { try { window.__ccNative({ type: 'aiVoiceEnd', cancel: true }); } catch (e) { } }
+    if (webRec) { try { webRec.abort(); } catch (e) { } webRec = null; }
+    if (msg) toastMsg(msg);
+  }
+
+  function startHold(e) {
+    if (!PAGE || holdOn) return;
+    if (!ready()) { openCfgSheet(); return; }
+    e.preventDefault();
+    holdOn = true;
+    holdCancel = false;
+    var gen = ++voiceGen;
+    if (micEl) micEl.classList.add('hold');
+    openVoiceOverlay();
+    try { if (micEl && micEl.setPointerCapture) micEl.setPointerCapture(e.pointerId); } catch (err) { }
+
+    if (window.__ccNative) {
+      try { window.__ccNative({ type: 'aiVoiceStart' }); } catch (err) { abortHold('语音不可用'); }
+      return;
+    }
+    /* 浏览器兜底：Web Speech API（Chrome 等支持） */
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { abortHold('当前环境不支持语音'); return; }
+    try {
+      webFinal = '';
+      webRec = new SR();
+      webRec.lang = 'zh-CN';
+      webRec.interimResults = true;
+      webRec.continuous = false;
+      webRec.onresult = function (ev) {
+        var t = '';
+        for (var i = 0; i < ev.results.length; i++) t += (ev.results[i][0] && ev.results[i][0].transcript) || '';
+        webFinal = t;
+        if (gen === voiceGen && holdOn) setPartial(t);
+      };
+      webRec.onerror = function () { };
+      webRec.start();
+    } catch (err) {
+      abortHold('语音启动失败');
+    }
+  }
+
+  function moveHold(e) {
+    if (!holdOn) return;
+    var cancel = false;
+    try {
+      var y = (typeof e.clientY === 'number') ? e.clientY : 0;
+      var r = micEl ? micEl.getBoundingClientRect() : null;
+      cancel = !!(r && y < r.top - 30);
+    } catch (err) { }
+    if (cancel !== holdCancel) {
+      holdCancel = cancel;
+      if (voiceBox) voiceBox.classList.toggle('cancel', cancel);
+      var hint = document.getElementById('aiVoiceHint');
+      if (hint) hint.textContent = cancel ? '松开手指，取消本次' : '正在听，请说话';
+      setPartial(cancel ? '' : (webFinal || ''));
+    }
+  }
+
+  function endHold(e) {
+    if (!holdOn) return;
+    var cancel = holdCancel;
+    var gen = voiceGen;
+    if (window.__ccNative) {
+      voiceCleanup();
+      try { window.__ccNative({ type: 'aiVoiceEnd', cancel: cancel }); } catch (err) { }
+      return;
+    }
+    /* 浏览器：松开后 stop，等结果回来再发 */
+    voiceCleanup();
+    if (cancel || !webRec) {
+      if (webRec) { try { webRec.abort(); } catch (err) { } webRec = null; }
+      return;
+    }
+    var rec = webRec;
+    var handled = false;
+    function wrap() {
+      if (handled || gen !== voiceGen) return;
+      handled = true;
+      var s = String(webFinal || '').trim();
+      if (s) ask(s); else toastMsg('没听清，请再试一次');
+    }
+    rec.onend = wrap;
+    setTimeout(wrap, 1600);
+    try { rec.stop(); } catch (err) { }
+  }
+
+  /* 原生回调：实时部分结果 / 最终结果 / 取消 */
+  window.ccAiVoicePartial = function (t) {
+    if (!holdOn) return;
+    if (!holdCancel) setPartial(String(t || ''));
+  };
+  window.ccAiVoiceResult = function (t) {
+    var s = String(t || '').trim();
+    voiceCleanup();
+    if (!s) { toastMsg('没听清，请再试一次'); return; }
+    if (!PAGE) return;
+    if (!ready()) { openCfgSheet(); return; }
+    ask(s);
+  };
+  window.ccAiVoiceCancel = function () {
+    voiceCleanup();
+    toastMsg('已取消');
+  };
 
   /* ------------------------------------------------------------------ *
    * 12. 配置面板（对话页里也能直接改）

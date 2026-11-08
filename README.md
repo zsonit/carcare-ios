@@ -25,6 +25,19 @@
 | --- |
 | ![AI 车况助手](screenshots/6-ai.jpg) |
 
+## 2.5.0：按住说话，直接和 AI 对话
+
+不用打字了：对话页输入栏新增麦克风，**按住说话、松开就把话发给模型**，
+说话时实时显示识别文字，手指上滑松开即取消；文字输入原样保留，两种方式随意切。
+
+| 能力 | 说明 |
+| --- | --- |
+| 按住说话 | 系统级语音识别（离线可用），边说边出字，松开自动发送 |
+| 上滑取消 | 说着不要了，手指往上一滑松手即取消，不会误发 |
+| 最长 30 秒 | 超时自动按松开处理，不会一直录着 |
+| 网页版同步 | GitHub Pages 网页版同样可用（浏览器支持 Web Speech API 时），不支持的环境自动隐藏麦克风 |
+| 隐私 | 识别在本机完成，录音不上传、不保存 |
+
 ## 2.4.0：内置 AI 车况助手（读得到全部记录，也动手记账）
 
 把一个大模型接进了 App。它看得到这台车的每一条数据，能回答车况问题、给保养建议，
@@ -175,7 +188,7 @@ iPhone 用 **Safari** 打开 <https://zsonit.github.io/carcare-ios/> → 点「�
 
 **正式发布版（iOS + Android 双端安装包都在这一个地址）：[https://github.com/zsonit/carcare-ios/releases/latest](https://github.com/zsonit/carcare-ios/releases/latest)。**
 
-`dist/CheGuanJia-iOS-v2.4.0-b8-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
+`dist/CheGuanJia-iOS-v2.5.0-b9-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
 iOS 强制签名校验，所以需要一个**重签名工具**（Windows 也可以，不需要 Mac）：
 
 1. Windows 装 [Sideloadly](https://sideloadly.io/) 或 爱思助手；
