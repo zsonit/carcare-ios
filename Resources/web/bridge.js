@@ -17,12 +17,23 @@
   window.__ccNative = post;
 
   /* 1) 本身就是独立 App：隐藏「安装到手机」卡片（与安卓 WebView 版一致） */
-  try {
-    var style = document.createElement('style');
-    style.textContent = '#installCard{display:none!important}' +
-      'input,select,textarea{font-size:16px!important}'; /* 避免 iOS 聚焦表单时自动放大页面 */
-    (document.head || document.documentElement).appendChild(style);
-  } catch (e) {}
+  var styleInjected = false;
+  function injectStyle() {
+    if (styleInjected) { return; }
+    var host = document.head || document.documentElement;
+    if (!host) { return; }
+    try {
+      var style = document.createElement('style');
+      style.textContent = '#installCard{display:none!important}' +
+        'input,select,textarea{font-size:16px!important}'; /* 避免 iOS 聚焦表单时自动放大页面 */
+      host.appendChild(style);
+      styleInjected = true;
+    } catch (e) {}
+  }
+  injectStyle();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectStyle);
+  }
 
   /* 2) 系统通知：WKWebView 不提供 Notification API，转成原生本地通知 */
   function CCNotification(title, options) {
