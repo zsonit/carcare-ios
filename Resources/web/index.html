@@ -1825,8 +1825,11 @@ function importData(){
 }
 function loadDemo(){
   if(!confirm('将填充示例车辆与数据（不覆盖现有车辆）？'))return;
-  const vid=uid();
-  DB.vehicles.push({id:vid,name:'示例·大众朗逸',model:'大众 朗逸 1.5L',plate:'沪A·D8888',vin:'LV2A23B8XN1234567',buyDate:'2023-05-01',mileage:32800,insuranceDue:addMonths(today(),3),inspectionDue:addMonths(today(),8),power:'fuel'});
+  const demo={name:'示例·大众朗逸',model:'大众 朗逸 1.5L',plate:'沪A·D8888',vin:'LV2A23B8XN1234567',buyDate:'2023-05-01',mileage:32800,insuranceDue:addMonths(today(),3),inspectionDue:addMonths(today(),8),power:'fuel',warrantyEnd:addMonths(today(),10),warrantyKm:100000};
+  /* 库里只剩一辆空白默认车时，直接把它填成示例车，免得示例数据下面挂着一辆空车 */
+  const blank=(DB.vehicles.length===1&&!DB.vehicles[0].model&&!DB.vehicles[0].plate&&!DB.vehicles[0].mileage)?DB.vehicles[0]:null;
+  const vid=blank?blank.id:uid();
+  if(blank)Object.assign(blank,demo); else DB.vehicles.push(Object.assign({id:vid},demo));
   DB.reminders.push({id:uid(),vehicleId:vid,name:'机油+机滤',basis:'both',months:6,km:5000,lastDate:addMonths(today(),-5),lastMileage:28000,enabled:true});
   DB.reminders.push({id:uid(),vehicleId:vid,name:'保险续费',basis:'date',months:12,km:0,lastDate:addMonths(today(),-9),lastMileage:0,enabled:true});
   DB.reminders.push({id:uid(),vehicleId:vid,name:'刹车片检查',basis:'mileage',months:0,km:40000,lastDate:addMonths(today(),-2),lastMileage:28000,enabled:true});
