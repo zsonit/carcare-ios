@@ -361,11 +361,21 @@
   .kv:last-child{border-bottom:none;padding-bottom:2px}
   .note{font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.6}
   .chk{
-    display:flex;align-items:center;gap:10px;padding:11px 13px;margin-bottom:8px;
+    display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:8px;
     border-radius:var(--radius-xs);border:1px solid rgba(255,255,255,.85);
     background:rgba(255,255,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.85);
   }
   .chk input{width:auto;flex:none;box-shadow:none;accent-color:var(--pri)}
+  input[type=checkbox]{
+    width:20px;height:20px;min-width:20px;padding:0;margin:0;flex:0 0 auto;
+    border:1.5px solid rgba(110,135,165,.6);border-radius:7px;background:#fff;
+    box-shadow:inset 0 1px 2px rgba(16,44,80,.06);
+    -webkit-appearance:none;appearance:none;transition:background .18s ease,border-color .18s ease;
+  }
+  input[type=checkbox]:checked{
+    border-color:#0a84ff;
+    background:#0a84ff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'><path d='M2.6 7.4 5.6 10.4 11.4 4.2' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>") center/14px 14px no-repeat;
+  }
   .chk span{flex:1}
 
   /* ---------- 开关（iOS 27 尺寸） ---------- */
@@ -524,6 +534,127 @@
     .modal .sheet{border-radius:32px;border-bottom:1px solid rgba(255,255,255,.85);max-height:86vh}
     .modal .sheet::before{display:none}
   }
+
+  /* ============================================================
+     增强模块：分段控件 / 日历 / 轮胎四轮图 / 证件库 / 全屏页
+     ============================================================ */
+  .seg{
+    display:flex;gap:4px;padding:4px;margin:2px 0 12px;border-radius:16px;
+    border:1px solid rgba(255,255,255,.78);background:rgba(255,255,255,.44);
+    box-shadow:inset 0 1px 2px rgba(16,44,80,.06);
+  }
+  .seg button{
+    flex:1;padding:9px 4px;border-radius:12px;font-size:13px;font-weight:650;color:var(--sub);
+    white-space:nowrap;transition:background .2s ease,color .2s ease,box-shadow .2s ease;
+  }
+  .seg button.on{
+    color:#fff;background:linear-gradient(180deg,#4aa5ff,#0a84ff);
+    box-shadow:0 6px 14px -8px rgba(10,132,255,.9),inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .seg.mini{margin:4px 0 2px}
+  .seg.mini button{font-size:12px;padding:7px 4px}
+  .sub-head{display:flex;align-items:center;gap:8px;margin:14px 2px 8px}
+  .sub-head h4{flex:1;font-size:14px;font-weight:750;letter-spacing:-.2px}
+  .lnk{flex:0 0 auto;color:var(--pri-d);font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:rgba(10,132,255,.11);white-space:nowrap}
+  .rowlist{display:flex;flex-direction:column;gap:9px}
+  .item{
+    padding:12px 13px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.88);
+    background:linear-gradient(180deg,rgba(255,255,255,.80),rgba(255,255,255,.55));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 3px 10px -8px rgba(16,44,80,.4);
+  }
+  .item .t{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700}
+  .item .t .sp{flex:1;min-width:0}
+  .item .s{color:var(--sub);font-size:12px;margin-top:3px;line-height:1.5}
+  .item .acts{display:flex;gap:8px;margin-top:9px;justify-content:flex-end}
+  .item .acts button{flex:0 0 auto;min-width:66px;padding:7px 14px;border-radius:11px;font-size:12.5px;font-weight:650;color:var(--pri-d);background:rgba(10,132,255,.1)}
+  .item .acts button.del{color:var(--bad-c);background:rgba(232,56,44,.1)}
+
+  /* 日历 */
+  .cal-head{display:flex;align-items:center;gap:6px;margin:0 0 8px}
+  .cal-head b{flex:1;font-size:14.5px;font-weight:750;letter-spacing:-.2px}
+  .cal-nav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:16px;line-height:1;color:var(--ink-2);background:rgba(120,145,175,.15)}
+  .cal-nav:active{background:rgba(120,145,175,.28)}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .cal-dow{text-align:center;font-size:10.5px;font-weight:750;color:var(--sub);padding:2px 0 4px}
+  .cal-cell{position:relative;height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    border-radius:11px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink-2);transition:background .16s ease}
+  .cal-cell.dim{opacity:.26}
+  .cal-cell.today{background:rgba(10,132,255,.13);color:var(--pri-d);font-weight:800}
+  .cal-cell.sel{background:linear-gradient(180deg,#4aa5ff,#0a84ff);color:#fff;font-weight:800;
+    box-shadow:0 6px 14px -8px rgba(10,132,255,.95)}
+  .cal-cell .dt{display:flex;gap:2px;margin-top:2px;height:4px}
+  .cal-cell .dt i{width:4px;height:4px;border-radius:50%;background:var(--pri)}
+  .cal-cell .dt i.bad{background:var(--bad)}
+  .cal-cell .dt i.warn{background:var(--warn)}
+  .cal-cell .dt i.done{background:rgba(90,110,135,.5)}
+  .cal-day{margin-top:10px;padding-top:10px;border-top:1px solid rgba(108,132,160,.16);font-size:12.5px;color:var(--sub);line-height:1.7}
+  .cal-day b{color:var(--ink);font-weight:700}
+
+  /* 轮胎四轮图 */
+  .tire-grid{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:22px 0 4px}
+  .tire-grid::before{
+    content:'▲ 车头';position:absolute;top:0;left:50%;transform:translateX(-50%);
+    font-size:10px;font-weight:750;color:var(--sub);letter-spacing:1px;
+  }
+  .tire-grid::after{
+    content:'';position:absolute;left:50%;top:24px;bottom:8px;width:1px;
+    background:linear-gradient(180deg,rgba(108,132,160,0),rgba(108,132,160,.28),rgba(108,132,160,0));
+  }
+  .tcell{padding:10px 11px;border-radius:15px;border:1px solid rgba(255,255,255,.9);
+    background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.6));
+    box-shadow:inset 0 1px 0 #fff,0 4px 12px -9px rgba(16,44,80,.45)}
+  .tcell .pos{font-size:10.5px;font-weight:750;color:var(--sub);letter-spacing:.4px}
+  .tcell .dep{font-size:20px;font-weight:800;letter-spacing:-.6px;font-variant-numeric:tabular-nums;line-height:1.25}
+  .tcell .dep small{font-size:10.5px;font-weight:650;color:var(--sub);margin-left:1px}
+  .tcell .pre{font-size:11px;color:var(--sub);margin-top:1px}
+  .tcell.bad{background:linear-gradient(180deg,rgba(255,226,224,.95),rgba(255,240,239,.7));border-color:rgba(232,56,44,.28)}
+  .tcell.warn{background:linear-gradient(180deg,rgba(255,240,214,.95),rgba(255,247,232,.7));border-color:rgba(224,134,0,.26)}
+
+  /* 证件库 */
+  .docgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .doc{
+    position:relative;padding:11px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.9);
+    background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.58));
+    box-shadow:inset 0 1px 0 #fff,0 4px 12px -9px rgba(16,44,80,.45);overflow:hidden;
+  }
+  .doc .dn{font-size:12.5px;font-weight:750;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .doc .dd{font-size:11px;color:var(--sub);margin-top:2px}
+  .doc .dc{position:absolute;top:8px;right:8px;font-size:10px;font-weight:750;padding:2px 7px;border-radius:999px;
+    background:rgba(10,132,255,.12);color:var(--pri-d)}
+  .doc .dc.bad{background:rgba(232,56,44,.15);color:var(--bad-c)}
+  .doc .dc.warn{background:rgba(224,134,0,.17);color:var(--warn-c)}
+  .doc img{width:100%;height:56px;object-fit:cover;border-radius:9px;margin-top:7px;border:1px solid rgba(255,255,255,.9)}
+
+  /* 全屏子页面（自查手册等） */
+  .page{
+    position:fixed;inset:0;z-index:58;overflow:auto;-webkit-overflow-scrolling:touch;
+    background:linear-gradient(180deg,#f3f8ff 0%,#e9f1fb 100%);
+    animation:pageIn .26s cubic-bezier(.22,.9,.28,1);
+    padding-bottom:calc(24px + env(safe-area-inset-bottom));
+  }
+  @keyframes pageIn{from{opacity:.5;transform:translate3d(6%,0,0)}to{opacity:1;transform:none}}
+  .page-head{
+    position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+    background:linear-gradient(180deg,rgba(255,255,255,.88),rgba(255,255,255,.62));
+    -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+    border-bottom:1px solid rgba(255,255,255,.85);
+  }
+  .page-head b{flex:1;font-size:16px;font-weight:800;letter-spacing:-.3px}
+  .page-head .back{font-size:14px;font-weight:700;color:var(--pri-d);padding:6px 12px;border-radius:999px;background:rgba(10,132,255,.11)}
+  .page-body{padding:14px;max-width:780px;margin:0 auto}
+  .lamp{display:flex;gap:11px;align-items:flex-start}
+  .lamp .g{width:34px;height:34px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;font-size:17px}
+  .lamp .g.red{background:rgba(232,56,44,.15);color:#c9271c}
+  .lamp .g.amber{background:rgba(224,134,0,.18);color:#9a6700}
+  .lamp .g.green{background:rgba(40,167,69,.16);color:#1a7f37}
+  .spark{display:block;width:100%;height:auto;overflow:visible}
+  .kcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kcards .card{margin-bottom:0;padding:13px 12px;text-align:center}
+  .kcards .card b{display:block;font-size:19px;font-weight:800;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+  .kcards .card span{font-size:11px;color:var(--sub);font-weight:650}
+  .hint-row{display:flex;align-items:center;gap:3px;color:var(--sub);font-size:11.5px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -545,6 +676,35 @@
         <div class="card"><div class="stat"><b id="cntSoon" style="color:var(--warn)">0</b><span>即将到期</span></div></div>
         <div class="card"><div class="stat"><b id="cntOk" style="color:var(--ok)">0</b><span>正常</span></div></div>
       </div>
+      <!-- 证照与到期事项：保险 / 年检 / 质保 / 驾照 / 保单 -->
+      <div class="card" id="expiryCard">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">证照与到期事项</h3>
+          <button class="lnk" type="button" onclick="openDocModal()">+ 添加</button>
+        </div>
+        <div id="expiryList" class="rowlist"></div>
+      </div>
+
+      <!-- 本季保养清单（按月份自动推） -->
+      <div class="card" id="seasonCard">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">本季保养清单</h3>
+          <span class="pill pri" id="seasonTag">—</span>
+        </div>
+        <div id="seasonBox"></div>
+      </div>
+
+      <!-- 到期日历 -->
+      <div class="card" id="calCard">
+        <div class="cal-head">
+          <b id="calTitle">—</b>
+          <button class="cal-nav" type="button" onclick="calMove(-1)" aria-label="上个月">‹</button>
+          <button class="cal-nav" type="button" onclick="calMove(1)" aria-label="下个月">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-day" id="calDay"></div>
+      </div>
+
       <div class="rem-head">
         <div class="sec-title">我的保养提醒</div>
         <button class="btn ghost rem-add" type="button" onclick="quickAddReminder()">+ 添加提醒</button>
@@ -558,9 +718,19 @@
 
     <!-- 维保服务 -->
     <section class="screen hidden" id="screen-services">
+      <div class="seg" id="recSeg">
+        <button class="on" type="button" data-pane="service" onclick="pickRec('service')">维保</button>
+        <button type="button" data-pane="fuel" onclick="pickRec('fuel')">加油</button>
+        <button type="button" data-pane="cost" onclick="pickRec('cost')">费用</button>
+      </div>
+      <div id="recPane-service">
       <div class="card">
         <h3>本次维保记录</h3>
         <div class="muted">选择服务类别与项目，一键登记。登记后可自动更新对应提醒。</div>
+        <div class="seg mini" style="margin:12px 0 2px">
+          <button class="on" type="button" data-kind="service" onclick="setKind('service')">常规保养</button>
+          <button type="button" data-kind="repair" onclick="setKind('repair')">维修工单</button>
+        </div>
         <label>服务类别</label>
         <div class="cat-tabs" id="catTabs"></div>
         <div class="cat-items-head">
@@ -589,17 +759,141 @@
         <label>收据 / 发票凭证</label>
         <input id="svcReceipt" type="file" accept="image/*">
         <div id="receiptPrev" class="row" style="margin-top:8px"></div>
+        <div id="repairBox" class="hidden">
+          <label>故障现象（客户描述）</label>
+          <textarea id="svcFault" placeholder="如：冷车启动抖动、右前轮过坎异响"></textarea>
+          <label>检测结论</label>
+          <input id="svcDiag" placeholder="如：2 缸点火线圈失效 / 前轮轴承磨损">
+          <div class="grid2">
+            <div><label>保修（月，0=无）</label><input id="svcWarranty" type="number" value="0"></div>
+            <div><label>保修（公里，0=无）</label><input id="svcWarrantyKm" type="number" value="0"></div>
+          </div>
+          <label>修前照片</label>
+          <input id="svcBefore" type="file" accept="image/*">
+          <div id="beforePrev" class="row" style="margin-top:8px"></div>
+          <label>修后照片</label>
+          <input id="svcAfter" type="file" accept="image/*">
+          <div id="afterPrev" class="row" style="margin-top:8px"></div>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="svcRework"><span>返修工单（同一故障再次返店处理）</span></label>
+        </div>
         <button class="btn" style="margin-top:14px;width:100%" onclick="saveService()">保存维保记录</button>
+      </div>
+      </div><!-- /recPane-service -->
+
+      <!-- 加油 -->
+      <div id="recPane-fuel" class="hidden">
+        <div class="card">
+          <h3>记一次加油</h3>
+          <div class="muted">填里程与加油量，自动算百公里油耗；勾「加满」油耗才算得准。</div>
+          <div class="grid2">
+            <div><label>日期</label><input id="fDate" type="date"></div>
+            <div><label>当前里程 (km)</label><input id="fMile" type="number" inputmode="numeric"></div>
+          </div>
+          <div class="grid2">
+            <div><label>加油量 (L)</label><input id="fLiters" type="number" inputmode="decimal" placeholder="0.00" oninput="calcFuelPrice()"></div>
+            <div><label>金额 (¥)</label><input id="fAmt" type="number" inputmode="decimal" placeholder="0.00" oninput="calcFuelPrice()"></div>
+          </div>
+          <div class="grid2">
+            <div><label>单价 (¥/L)</label><input id="fPrice" type="text" readonly value="—"></div>
+            <div><label>油品</label><select id="fGrade"><option>92#</option><option>95#</option><option>98#</option><option>0# 柴油</option><option>充电</option></select></div>
+          </div>
+          <label>这次加满了吗</label>
+          <div class="seg mini">
+            <button class="on" type="button" id="fFullY" onclick="setFull(1)">加满了</button>
+            <button type="button" id="fFullN" onclick="setFull(0)">没加满</button>
+          </div>
+          <label>加油站</label><input id="fStation" placeholder="如：中石化 建国路站">
+          <button class="btn" style="width:100%;margin-top:14px" onclick="saveFuel()">保存加油记录</button>
+          <button class="btn ghost" style="width:100%;margin-top:8px" onclick="voiceFill('fuel')">🎤 语音录入</button>
+          <div class="note" id="fuelQuick"></div>
+        </div>
+        <div class="card">
+          <h3>最近加油</h3>
+          <div id="fuelList" class="rowlist"></div>
+        </div>
+      </div>
+
+      <!-- 费用 -->
+      <div id="recPane-cost" class="hidden">
+        <div class="card">
+          <h3>记一笔费用</h3>
+          <div class="grid2">
+            <div><label>类型</label>
+              <select id="cType2">
+                <option>油费</option><option>停车/过路</option><option>洗车美容</option><option>保险</option>
+                <option>维修</option><option>违章罚款</option><option>年检</option><option>其他</option>
+              </select></div>
+            <div><label>金额 (¥)</label><input id="cAmt2" type="number" inputmode="decimal" placeholder="0.00"></div>
+          </div>
+          <label>日期</label><input id="cDate2" type="date">
+          <label>备注</label><input id="cNote2" placeholder="如：公司地库月卡">
+          <button class="btn" style="width:100%;margin-top:14px" onclick="saveCost2()">保存</button>
+          <button class="btn ghost" style="width:100%;margin-top:8px" onclick="voiceFill('cost')">🎤 语音记账</button>
+        </div>
+        <div class="card">
+          <h3>最近费用</h3>
+          <div id="costList" class="rowlist"></div>
+        </div>
       </div>
     </section>
 
-    <!-- 档案管理 -->
+    <!-- 车库 -->
     <section class="screen hidden" id="screen-archive">
       <div class="sec-title">车辆档案（多车独立管理）</div>
-      <div class="muted" style="font-size:12px;margin:-2px 0 10px">提示：点卡片可编辑；手机上左滑卡片可删除。</div>
+      <div class="muted" style="font-size:12px;margin:-2px 0 10px">点卡片可编辑；手机上左滑卡片可删除。</div>
       <div id="vehicleCards"></div>
-      <button class="btn ghost" style="width:100%;margin-bottom:14px" onclick="openVehicleModal()">+ 添加 / 编辑车辆</button>
-      <div class="sec-title">维保记录</div>
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn ghost" onclick="openVehicleModal()">+ 车辆</button>
+        <button class="btn ghost" onclick="openOdoModal()">更新里程</button>
+      </div>
+
+      <!-- 轮胎 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:2px">
+          <h3 style="flex:1;margin:0">轮胎</h3>
+          <button class="lnk" type="button" onclick="openTireModal()">档案</button>
+          <button class="lnk" type="button" onclick="openTireLog()">+ 深度</button>
+        </div>
+        <div id="tireBox"></div>
+      </div>
+
+      <!-- 配件保修卡 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">配件保修卡</h3>
+          <button class="lnk" type="button" onclick="openPartModal()">+ 添加</button>
+        </div>
+        <div class="muted" style="margin-bottom:6px">换过的件记一笔，保修期内故障可免费索赔。</div>
+        <div id="partBox" class="rowlist"></div>
+      </div>
+
+      <!-- 证件与保单 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">证件与保单</h3>
+          <button class="lnk" type="button" onclick="openDocModal()">+ 添加</button>
+        </div>
+        <div class="muted" style="margin-bottom:8px">行驶证、保单、发票、保养手册拍照存档，随时可查。</div>
+        <div id="docBox" class="docgrid"></div>
+      </div>
+
+      <!-- 里程记录 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">里程记录</h3>
+          <div class="pill pri" id="odoEstimate">—</div>
+        </div>
+        <div id="odoBox"></div>
+      </div>
+
+      <div class="sec-title">全部记录</div>
+      <div class="seg mini" id="histSeg">
+        <button class="on" type="button" data-h="all" onclick="pickHist('all')">全部</button>
+        <button type="button" data-h="service" onclick="pickHist('service')">维保</button>
+        <button type="button" data-h="repair" onclick="pickHist('repair')">维修</button>
+        <button type="button" data-h="fuel" onclick="pickHist('fuel')">加油</button>
+        <button type="button" data-h="cost" onclick="pickHist('cost')">费用</button>
+      </div>
       <div id="recordList"></div>
     </section>
 
@@ -609,6 +903,20 @@
         <div class="card"><div class="stat"><b id="costTotal">¥0</b><span>累计养车</span></div></div>
         <div class="card"><div class="stat"><b id="costMonth">¥0</b><span>本月</span></div></div>
       </div>
+      <div class="kcards" style="margin-bottom:14px">
+        <div class="card"><b id="costPerKm">¥0</b><span>每公里综合成本</span></div>
+        <div class="card"><b id="costYear">¥0</b><span>本年支出</span></div>
+      </div>
+
+      <!-- 油耗分析 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:2px">
+          <h3 style="flex:1;margin:0">油耗分析</h3>
+          <span class="pill pri" id="oilPill">—</span>
+        </div>
+        <div id="oilBox"></div>
+      </div>
+
       <div class="card">
         <div class="row" style="align-items:center;margin-bottom:6px">
           <b style="flex:none">费用统计报表</b>
@@ -621,6 +929,16 @@
         <div id="finBreak" style="margin-top:8px"></div>
         <button class="btn line" style="width:100%;margin-top:10px" onclick="openCostModal()">+ 记一笔（油费/保养/其他）</button>
       </div>
+
+      <!-- 套餐与储值 -->
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:4px">
+          <h3 style="flex:1;margin:0">套餐与储值</h3>
+          <button class="lnk" type="button" onclick="openPlanModal()">+ 添加</button>
+        </div>
+        <div class="muted" style="margin-bottom:6px">4S 店的「三次保养套餐」、洗车卡、储值余额，记剩余次数。</div>
+        <div id="planBox" class="rowlist"></div>
+      </div>
     </section>
 
     <!-- 设置 -->
@@ -629,9 +947,30 @@
         <h3>基础设置</h3>
         <div class="kv"><span>数据存储位置</span><b id="setMode">—</b></div>
         <div class="kv"><span>当前车辆数</span><b id="setVeh">0</b></div>
-        <div class="kv" style="align-items:center"><span>消息推送通知</span>
-          <label class="switch"><input type="checkbox" id="pushToggle" onchange="togglePush()"><i></i></label></div>
-        <div class="note">开启后，应用打开时会检查提醒并通过系统通知推送到期/逾期事项。</div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:2px">
+          <h3 style="flex:1;margin:0">提醒与通知</h3>
+          <label class="switch"><input type="checkbox" id="pushToggle" onchange="togglePush()"><i></i></label>
+        </div>
+        <div class="muted">开启后按「提前天数」在系统层定时推送，不打开 App 也会响。</div>
+        <div id="notiBox"></div>
+      </div>
+
+      <div class="card">
+        <h3>车型保养周期模板</h3>
+        <div class="muted">选品牌车系，一次把该车的保养周期写进规则（同名规则会被覆盖）。</div>
+        <div id="tplBox" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h3>用车手册</h3>
+        <div class="muted">仪表盘故障灯含义、常见故障现象与处理建议，全部离线。</div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost" onclick="openManual('lights')">故障灯对照</button>
+          <button class="btn ghost" onclick="openManual('symptoms')">症状自查</button>
+        </div>
       </div>
       <div class="card" id="nasCard">
         <div class="row" style="align-items:center;margin-bottom:2px">
@@ -665,6 +1004,8 @@
         <button class="btn line" style="width:100%;margin-top:8px" onclick="openRuleModal()">+ 新增保养规则</button>
       </div>
       <div class="card">
+        <h3>数据与备份</h3>
+        <button class="btn" style="width:100%;margin:8px 0 10px" onclick="exportHistory()">导出车辆履历 PDF（卖车用）</button>
         <div class="row">
           <button class="btn line" onclick="exportData('csv')">导出 CSV</button>
           <button class="btn line" onclick="exportData('pdf')">导出 PDF</button>
@@ -681,10 +1022,10 @@
 
   <nav id="nav">
     <div id="navLensTrail" aria-hidden="true"></div>
-    <div id="navLens" aria-hidden="true"><i class="lens-fill"></i></div>    <button class="on" data-screen="reminders" onclick="showScreen('reminders')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6.2-2.4 7.9-2.4 7.9h16.8S18 14.8 18 8.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></svg></span>提醒中心<span class="dot hidden" id="navDot"></span></button>
-    <button data-screen="services" onclick="showScreen('services')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 6.3a1 1 0 0 0 0 1.4l1.7 1.7a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8L6.7 20.4a2.1 2.1 0 0 1-3-3l6.8-6.8a6 6 0 0 1 8-8z"/></svg></span>维保服务</button>
-    <button data-screen="archive" onclick="showScreen('archive')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h4.2l2 2.6H19a2 2 0 0 1 2 2z"/></svg></span>档案管理</button>
-    <button data-screen="finance" onclick="showScreen('finance')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-5"/></svg></span>成本统计</button>
+    <div id="navLens" aria-hidden="true"><i class="lens-fill"></i></div>    <button class="on" data-screen="reminders" onclick="showScreen('reminders')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6.2-2.4 7.9-2.4 7.9h16.8S18 14.8 18 8.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></svg></span>提醒<span class="dot hidden" id="navDot"></span></button>
+    <button data-screen="services" onclick="showScreen('services')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 6.3a1 1 0 0 0 0 1.4l1.7 1.7a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8L6.7 20.4a2.1 2.1 0 0 1-3-3l6.8-6.8a6 6 0 0 1 8-8z"/></svg></span>记录</button>
+    <button data-screen="archive" onclick="showScreen('archive')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15.2h18"/><path d="M4.6 15.2v3.4a.9.9 0 0 0 .9.9h1.5a.9.9 0 0 0 .9-.9v-1.1"/><path d="M16.1 17.5v1.1a.9.9 0 0 0 .9.9h1.5a.9.9 0 0 0 .9-.9v-3.4"/><path d="M3 15.2l1.7-4.8a2.4 2.4 0 0 1 2.3-1.6h10a2.4 2.4 0 0 1 2.3 1.6L21 15.2"/><path d="M6.4 12.3h11.2"/></svg></span>车库</button>
+    <button data-screen="finance" onclick="showScreen('finance')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-5"/></svg></span>花费</button>
     <button data-screen="settings" onclick="showScreen('settings')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M19.3 14.6a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1.1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H4a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.5-1.1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3H10a1.6 1.6 0 0 0 1-1.5V4a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0-.3 1.8V10a1.6 1.6 0 0 0 1.5 1h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>设置</button>
   </nav>
 </div>
@@ -693,6 +1034,8 @@
 <div class="toast" id="toast"></div>
 <div id="modalRoot"></div>
 
+<!-- 增强模块：必须在主脚本之前加载，供 init() 期间调用 -->
+<script src="cc-ext.js"></script>
 <script>
 /* ============ 数据层 ============ */
 const KEY='carCareDB_v1';
@@ -726,6 +1069,7 @@ let DB={vehicles:[],records:[],reminders:[],costs:[],rules:[],priceBook:{},setti
 let MODE='local'; // 'nas' | 'local'
 let CUR=''; // current vehicle id
 let receiptB64='';
+let beforeB64='',afterB64='';   // 维修工单：修前 / 修后照片
 
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 // 常用保养规则模板（提醒中心「模板气泡」的数据源；按动力类型分组，用户只填上次日期/里程）
@@ -782,6 +1126,7 @@ async function load(){
   // 1) 本机数据先装载（保证离线秒开、NAS 挂了也能用）
   try{const raw=localStorage.getItem(KEY); if(raw){const d=JSON.parse(raw); if(d&&d.vehicles) DB=Object.assign(DB,d);}}catch(e){}
   DB._ts=DB._ts||0; DB.priceBook=DB.priceBook||{};
+  if (typeof xEnsureArrays === 'function') xEnsureArrays();   // 补齐加油/证件/轮胎等新表
   // 2) 开启了 NAS：首次拉取做「取新」合并（服务器较新→用之；本机较新→稍后自动推回）
   if(MODE==='nas'){
     try{
@@ -815,6 +1160,7 @@ async function save(){
   DB._ts=Date.now();
   try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('本机存储失败，可能空间不足');}
   if(MODE==='nas') schedulePush(); // 数据总是先落本机，NAS 推送异步不阻塞
+  if(typeof scheduleNativeSync==='function')scheduleNativeSync(); // 重排系统通知 + 角标/小组件数据
 }
 
 /* ============ NAS 同步（数据存本机 + 自动备份到 NAS 服务器） ============ */
@@ -1002,6 +1348,9 @@ function renderReminders(){
   document.getElementById('cntOk').textContent=DB.reminders.filter(r=>r.vehicleId===CUR&&evalReminder(r).status==='ok').length;
   const dot=document.getElementById('navDot');
   if(DB.reminders.some(r=>r.vehicleId===CUR&&evalReminder(r).status!=='ok'))dot.classList.remove('hidden');else dot.classList.add('hidden');
+  if(typeof renderExpiry==='function')renderExpiry();
+  if(typeof renderCalendar==='function')renderCalendar();
+  if(typeof renderSeasonList==='function')renderSeasonList();
 }
 function doneReminder(id){
   const r=DB.reminders.find(x=>x.id===id);if(!r)return;
@@ -1015,16 +1364,20 @@ function delReminder(id){if(!confirm('确认删除该提醒？'))return;DB.remin
 let curCat='常规保养';
 let curBill={};      // 本次登记：{ 项目名:{labor,parts} }
 let customNames=[];  // 手动补充项目名（当前类别下）
+function curCatalog(){
+  // 维修工单用一套独立的排障项目目录；常规维保按动力类型取
+  return (typeof recKind!=='undefined'&&recKind==='repair')?REPAIR_CATALOG:catalogFor(curVehicle().power);
+}
 function renderCatTabs(){
-  const cat=catalogFor(curVehicle().power);      // 按当前车辆动力类型取目录
+  const cat=curCatalog();
   const keys=Object.keys(cat);
-  if(keys.indexOf(curCat)<0)curCat=keys[0];     // 切换动力类型后修正当前分类
+  if(keys.indexOf(curCat)<0)curCat=keys[0];     // 切换动力类型/模式后修正当前分类
   document.getElementById('catTabs').innerHTML=keys.map(c=>`<button class="${c===curCat?'on':''}" onclick="pickCat('${c}')">${c}</button>`).join('');
   renderCatItems();
 }
 function pickCat(c){curCat=c;curBill={};customNames=[];renderCatTabs();renderItemBill();}
 function renderCatItems(){
-  const cat=catalogFor(curVehicle().power);
+  const cat=curCatalog();
   const box=document.getElementById('catItems');
   box.innerHTML=(cat[curCat]||[]).map(it=>`<button type="button" class="ichip" data-item="${esc(it)}" onclick="toggleItem(this)">${esc(it)}</button>`).join('');
   box.scrollLeft=0;
@@ -1083,8 +1436,22 @@ function saveService(){
   const labor=items.reduce((s,i)=>s+i.labor,0);
   const parts=items.reduce((s,i)=>s+i.parts,0);
   const cost=labor+parts;
-  const rec={id:uid(),vehicleId:CUR,date,mileage,cat:curCat,items,labor,parts,cost,shop,note,receipt:receiptB64};
+  const isRepair=(typeof recKind!=='undefined'&&recKind==='repair');
+  const g=id=>{const el=document.getElementById(id);return el?el.value:'';};
+  const rec={id:uid(),vehicleId:CUR,date,mileage,cat:curCat,items,labor,parts,cost,shop,note,receipt:receiptB64,
+    kind:isRepair?'repair':'service'};
+  if(isRepair){
+    rec.fault=g('svcFault').trim();rec.diag=g('svcDiag').trim();
+    rec.warrantyMonths=parseInt(g('svcWarranty'))||0;rec.warrantyKm=parseInt(g('svcWarrantyKm'))||0;
+    rec.before=beforeB64;rec.after=afterB64;
+    const rw=document.getElementById('svcRework');rec.rework=!!(rw&&rw.checked);
+  }
   DB.records.unshift(rec);
+  // 工单带保修 → 自动建一张配件保修卡（名字取第一个项目）
+  if(isRepair&&(rec.warrantyMonths||rec.warrantyKm)){
+    DB.parts.unshift({id:uid(),vehicleId:CUR,name:items.map(i=>i.name).join('/')||rec.cat,date,mileage,
+      warrantyMonths:rec.warrantyMonths,warrantyKm:rec.warrantyKm,shop,cost:0,note:'来自维修工单'});
+  }
   // 更新价格记忆表（下次同项目自动带出）
   items.forEach(i=>{DB.priceBook[i.name]={labor:i.labor,parts:i.parts,cost:i.labor+i.parts,shop,date};});
   // 同步车辆里程
@@ -1098,6 +1465,11 @@ function saveService(){
   const br=document.getElementById('svcBreak');if(br)br.textContent='';
   document.getElementById('svcShop').value='';document.getElementById('svcNote').value='';
   document.getElementById('svcReceipt').value='';document.getElementById('receiptPrev').innerHTML='';receiptB64='';
+  ['svcFault','svcDiag','svcWarranty','svcWarrantyKm'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='svcWarranty'?'0':(id==='svcWarrantyKm'?'0':'');});
+  const rw=document.getElementById('svcRework');if(rw)rw.checked=false;
+  ['svcBefore','svcAfter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const bp=document.getElementById('beforePrev'),ap=document.getElementById('afterPrev');
+  if(bp)bp.innerHTML='';if(ap)ap.innerHTML='';beforeB64='';afterB64='';
   document.getElementById('itemBill').innerHTML='';
   [...document.querySelectorAll('#catItems .ichip')].forEach(i=>i.classList.remove('on'));
   updateItemCount();
@@ -1114,9 +1486,22 @@ document.getElementById('svcReceipt').addEventListener('change',function(){
     document.getElementById('receiptPrev').innerHTML=`<img class="thumb" src="${receiptB64}">`;
   };img.src=rd.result;};rd.readAsDataURL(f);
 });
+/* 维修工单：修前 / 修后照片 */
+[['svcBefore','beforePrev','beforeB64'],['svcAfter','afterPrev','afterB64']].forEach(([inp,prev,key])=>{
+  const el=document.getElementById(inp); if(!el)return;
+  el.addEventListener('change',function(){
+    const f=this.files[0]; if(!f)return;
+    compressImg(f,function(b64){
+      if(key==='beforeB64')beforeB64=b64; else afterB64=b64;
+      const box=document.getElementById(prev);
+      if(box)box.innerHTML='<img class="thumb" src="'+b64+'">';
+    },800);
+  });
+});
 
 /* ============ 渲染：档案管理 ============ */
 function renderArchive(){
+  if(typeof renderGarageHealth==='function')renderGarageHealth();   // 轮胎/保修卡/证件/里程/历史
   document.getElementById('vehicleCards').innerHTML=DB.vehicles.map(v=>`<div class="vcard" data-id="${v.id}">
     <div class="vcard-del" onclick="delVehicle('${v.id}')">删除</div>
     <div class="vcard-front" onclick="onVehFront('${v.id}',this)">
@@ -1130,6 +1515,7 @@ function renderArchive(){
       <div class="kv"><span>当前里程</span><b>${fmt(v.mileage)} km</b></div>
       <div class="kv"><span>保险到期</span><b>${esc(v.insuranceDue)||'—'}</b></div>
       <div class="kv"><span>年检到期</span><b>${esc(v.inspectionDue)||'—'}</b></div>
+      <div class="kv"><span>原厂质保</span><b>${esc(v.warrantyEnd)||'—'}</b></div>
     </div>
   </div>`).join('');
   attachSwipe();
@@ -1178,6 +1564,7 @@ function delVehicle(id){
   DB.records=DB.records.filter(r=>r.vehicleId!==id);
   DB.reminders=DB.reminders.filter(r=>r.vehicleId!==id);
   DB.costs=DB.costs.filter(c=>c.vehicleId!==id);
+  ['fuels','odo','docs','tires','tireLogs','parts','plans'].forEach(k=>{if(Array.isArray(DB[k]))DB[k]=DB[k].filter(x=>x.vehicleId!==id);});
   if(CUR===id)CUR=DB.vehicles[0]?DB.vehicles[0].id:null;
   closeModal();save();refreshVehicleSelect();renderArchive();renderAll();toast('车辆已删除');
 }
@@ -1186,10 +1573,15 @@ function viewImg(src){const w=window.open('');w.document.write('<img src="'+src+
 
 /* ============ 渲染：成本统计 ============ */
 function renderFinance(){
+  if(typeof renderOilStats==='function')renderOilStats();
+  if(typeof renderPlans==='function')renderPlans();
+  if(typeof updateFinanceExtra==='function')updateFinanceExtra();
   const range=document.getElementById('finRange').value;
   const costs=DB.costs.filter(c=>c.vehicleId===CUR).concat(
-    DB.records.filter(r=>r.vehicleId===CUR&&r.cost>0).map(r=>({type:'维保',amount:r.cost,date:r.date}))
-  );
+    DB.records.filter(r=>r.vehicleId===CUR&&r.cost>0).map(r=>({type:r.kind==='repair'?'维修':'维保',amount:r.cost,date:r.date}))
+  ).concat(
+    (DB.fuels||[]).filter(f=>f.vehicleId===CUR).map(f=>({type:'加油',amount:+f.amount||0,date:f.date}))
+  ).map(c=>c.type==='油费'?Object.assign({},c,{type:'加油'}):c);   // 手记的「油费」并入加油，避免重复分类
   const total=costs.reduce((s,c)=>s+(+c.amount||0),0);
   const now=new Date();const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const month=costs.filter(c=>c.date&&c.date.slice(0,7)===mKey).reduce((s,c)=>s+(+c.amount||0),0);
@@ -1246,20 +1638,23 @@ function renderSettings(){
   const nb=document.getElementById('nasBase'); if(nb&&document.activeElement!==nb)nb.value=c.base||'';
   const nk=document.getElementById('nasKey'); if(nk&&document.activeElement!==nk)nk.value=c.key||'';
   updateNasUI();
+  if(typeof renderNotiCfg==='function')renderNotiCfg();
+  if(typeof renderBrandTpl==='function')renderBrandTpl();
 }
 function togglePush(){
   DB.settings.push=document.getElementById('pushToggle').checked;
   if(DB.settings.push){Notification.requestPermission().then(p=>{if(p!=='granted'){toast('系统未授权通知');DB.settings.push=false;document.getElementById('pushToggle').checked=false;}});}
   save();
+  if(typeof pushNotifications==='function')setTimeout(pushNotifications,200);
+  if(typeof updateBadge==='function')setTimeout(updateBadge,200);
 }
 function pushNotify(title,body){
   if(DB.settings.push&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(title,{body});}catch(e){}}
 }
 function checkPushOnLoad(){
-  if(DB.settings.push&&'Notification'in window&&Notification.permission==='granted'){
-    const due=DB.reminders.filter(r=>r.vehicleId===CUR&&evalReminder(r).status!=='ok');
-    due.forEach(r=>{const e=evalReminder(r);pushNotify('保养提醒：'+r.name,e.detail.join('，'));});
-  }
+  // 改成系统级定时通知：启动时只「重排」，不再每次打开就弹一堆通知
+  if(typeof pushNotifications==='function')pushNotifications();
+  if(typeof updateBadge==='function')updateBadge();
 }
 
 /* ============ 弹窗：通用 ============ */
@@ -1288,6 +1683,11 @@ function openVehicleModal(id){
     <label>当前里程 (km)</label><input id="vMil" type="number" value="${esc(v.mileage)}">
     <label>保险到期日</label><input id="vIns" type="date" value="${esc(v.insuranceDue)}">
     <label>年检到期日</label><input id="vYr" type="date" value="${esc(v.inspectionDue)}">
+    <div class="grid2">
+      <div><label>原厂质保到期</label><input id="vWar" type="date" value="${esc(v.warrantyEnd)}"></div>
+      <div><label>质保里程 (km)</label><input id="vWarKm" type="number" value="${esc(v.warrantyKm||0)}"></div>
+    </div>
+    <div class="note">质保一般 3 年 / 10 万公里，以先到为准；到期前会提前提醒。</div>
     <button class="btn" style="width:100%;margin-top:14px" onclick="saveVehicle('${id||''}')">保存</button>
     ${id?`<button class="btn del" style="width:100%" onclick="delVehicle('${id}')">删除该车辆</button>`:''}`);
   const pv=document.getElementById('vPlateProv'); if(pv&&sp.prov) pv.value=sp.prov;
@@ -1297,7 +1697,8 @@ function saveVehicle(id){
   const plateProv=document.getElementById('vPlateProv').value;const plateNo=document.getElementById('vPlateNo').value.trim().toUpperCase();const plate=plateProv?(plateProv+'·'+plateNo):plateNo;
   const data={name,model:document.getElementById('vModel').value.trim(),power:document.getElementById('vPower').value||'fuel',plate,
     vin:document.getElementById('vVin').value.trim(),buyDate:document.getElementById('vBuy').value,
-    mileage:parseFloat(document.getElementById('vMil').value)||0,insuranceDue:document.getElementById('vIns').value,inspectionDue:document.getElementById('vYr').value};
+    mileage:parseFloat(document.getElementById('vMil').value)||0,insuranceDue:document.getElementById('vIns').value,inspectionDue:document.getElementById('vYr').value,
+    warrantyEnd:(document.getElementById('vWar')||{}).value||'',warrantyKm:parseFloat((document.getElementById('vWarKm')||{}).value)||0};
   if(id){Object.assign(DB.vehicles.find(x=>x.id===id),data);}
   else{data.id=uid();DB.vehicles.push(data);CUR=data.id;}
   // 保险/年检自动生成提醒
@@ -1432,6 +1833,24 @@ function loadDemo(){
   DB.records.push({id:uid(),vehicleId:vid,date:addMonths(today(),-5),mileage:28000,cat:'常规保养',items:[{name:'更换机油',labor:120,parts:300},{name:'机油滤清器',labor:0,parts:50}],labor:120,parts:350,cost:470,shop:'途虎养车',note:'含全合成机油',receipt:''});
   DB.records.push({id:uid(),vehicleId:vid,date:addMonths(today(),-2),mileage:31000,cat:'易损件更换',items:[{name:'雨刮片更换',labor:0,parts:45}],labor:0,parts:45,cost:45,shop:'途虎养车',note:'无骨雨刮一对',receipt:''});
   DB.costs.push({id:uid(),vehicleId:vid,type:'油费',amount:300,date:addMonths(today(),-1),note:'中石化95#'});
+  // 加油（满箱法可算出油耗）
+  [[-5,28100,42.5,330,'95#'],[-4,28720,38.2,296,'95#'],[-3,29410,41.0,318,'95#'],[-2,30120,39.6,307,'95#'],[0,30840,40.3,313,'95#']].forEach(([m,km,l,amt,g])=>{
+    DB.fuels.push({id:uid(),vehicleId:vid,date:addMonths(today(),m),mileage:km,liters:l,amount:amt,price:+(amt/l).toFixed(2),grade:g,full:1,station:'中石化 建国路站'});
+  });
+  DB.odo.push({id:uid(),vehicleId:vid,date:addMonths(today(),-1),mileage:32800,src:'打卡'});
+  // 证照
+  DB.docs.push({id:uid(),vehicleId:vid,cat:'保险单',name:'交强险 + 商业险',no:'PDAA2026310001',expire:addMonths(today(),2),amount:4280,company:'人保财险',photo:''});
+  DB.docs.push({id:uid(),vehicleId:'',cat:'驾驶证',name:'我的驾驶证',no:'3101**********1234',expire:addMonths(today(),8),amount:0,company:'上海交警',photo:''});
+  // 轮胎
+  DB.tires.push({vehicleId:vid,brand:'米其林 浩悦4',size:'225/45 R17',dot:'3824',install:addMonths(today(),-14),
+    pos:{fl:{d:5.6,p:2.4},fr:{d:5.8,p:2.4},rl:{d:4.2,p:2.3},rr:{d:4.4,p:2.3}},
+    logs:[{date:addMonths(today(),-14),mileage:24000,fl:7.2,fr:7.3,rl:5.8,rr:5.9},{date:addMonths(today(),-6),mileage:29000,fl:6.3,fr:6.5,rl:4.9,rr:5.1},{date:addMonths(today(),-1),mileage:32500,fl:5.6,fr:5.8,rl:4.2,rr:4.4}]});
+  // 配件保修
+  DB.parts.push({id:uid(),vehicleId:vid,name:'瓦尔塔 AGM 电瓶',date:addMonths(today(),-10),mileage:26000,warrantyMonths:24,warrantyKm:0,shop:'途虎养车',cost:880,note:'启停专用'});
+  DB.parts.push({id:uid(),vehicleId:vid,name:'前刹车片（博世）',date:addMonths(today(),-3),mileage:31000,warrantyMonths:12,warrantyKm:20000,shop:'途虎养车',cost:420,note:''});
+  // 套餐
+  DB.plans.push({id:uid(),vehicleId:vid,name:'4S 店三次基础保养',total:3,used:1,expire:addMonths(today(),14),shop:'上汽大众 4S'});
+
   DB.records.forEach(r=>r.items.forEach(i=>{if(typeof i==='object')DB.priceBook[i.name]={labor:i.labor,parts:i.parts,cost:i.labor+i.parts,shop:r.shop,date:r.date};}));
   CUR=vid;save();refreshVehicleSelect();renderAll();toast('示例数据已填充');
 }
@@ -1518,7 +1937,8 @@ function showScreen(s){
   if(s==='archive')renderArchive();
   if(s==='finance')renderFinance();
   if(s==='settings')renderSettings();
-  if(s==='services'){curBill={};customNames=[];document.getElementById('svcMileage').value=curVehicle().mileage||'';renderCatTabs();renderItemBill();}
+  if(s==='services'){curBill={};customNames=[];document.getElementById('svcMileage').value=curVehicle().mileage||'';renderCatTabs();renderItemBill();
+    if(typeof pickRec==='function')pickRec(typeof recPane==='string'?recPane:'service');}
 }
 function refreshVehicleSelect(){
   const sel=document.getElementById('vehicleSelect');
@@ -1526,7 +1946,8 @@ function refreshVehicleSelect(){
   sel.value=CUR;
   sel.onchange=()=>{CUR=sel.value;renderAll();};
 }
-function renderAll(){refreshVehicleSelect();renderReminders();renderArchive();renderFinance();renderSettings();}
+function renderAll(){refreshVehicleSelect();renderReminders();renderArchive();renderFinance();renderSettings();
+  if(typeof xRenderAll==='function')xRenderAll();}
 
 async function init(){
   await detectMode();

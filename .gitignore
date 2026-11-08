@@ -22,3 +22,5 @@ tools/icon_new.png
 tools/icon_A.png
 tools/icon_B.png
 tools/_shield.png
+tools/_dbg.*
+tools/_full_*.html

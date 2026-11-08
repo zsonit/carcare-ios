@@ -1,6 +1,8 @@
 import UIKit
 import WebKit
 import UserNotifications
+import Speech
+import AVFoundation
 
 /// 车管家 iOS 版：原生外壳 + WKWebView（内置同一套页面）+ 原生能力桥接
 final class WebViewController: UIViewController {
@@ -185,8 +187,154 @@ final class WebViewController: UIViewController {
         present(ImagePreviewController(image: image), animated: true, completion: nil)
     }
 
-    private func makePDF(html: String, name: String) {
-        PDFExporter.shared.makePDF(html: html, host: view) { [weak self] data in
+    // MARK: - 系统级定时提醒
+
+    /// 网页把「待办事项」算好后整批交给原生，原生按日期排成本地通知。
+    /// 这样即使几个月不打开 App，到期当天也会准时响。
+    private func scheduleNotifications(_ items: [[String: Any]]) {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            center.getPendingNotificationRequests { pending in
+                let mine = pending.map { $0.identifier }.filter { $0.hasPrefix("cc_") }
+                if !mine.isEmpty {
+                    center.removePendingNotificationRequests(withIdentifiers: mine)
+                }
+                for item in items {
+                    guard let id = item["id"] as? String, let ts = item["ts"] as? Double else { continue }
+                    let date = Date(timeIntervalSince1970: ts / 1000.0)
+                    guard date > Date() else { continue }
+                    let content = UNMutableNotificationContent()
+                    content.title = (item["title"] as? String) ?? "车管家"
+                    content.body = (item["body"] as? String) ?? ""
+                    content.sound = .default
+                    var comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+                    comps.second = 0
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+                    let req = UNNotificationRequest(identifier: "cc_" + id,
+                                                    content: content, trigger: trigger)
+                    center.add(req, withCompletionHandler: nil)
+                }
+            }
+        }
+    }
+
+    private func setBadge(_ n: Int) {
+        DispatchQueue.main.async {
+            let v = max(0, n)
+            if #available(iOS 16.0, *) {
+                UNUserNotificationCenter.current().setBadgeCount(v, withCompletionHandler: nil)
+            } else {
+                UIApplication.shared.applicationIconBadgeNumber = v
+            }
+        }
+    }
+
+    // MARK: - 语音记账（系统语音识别，离线可用）
+
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN"))
+    private let audioEngine = AVAudioEngine()
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private var voiceTimer: DispatchWorkItem?
+
+    private func startVoice() {
+        SFSpeechRecognizer.requestAuthorization { [weak self] status in
+            guard let self = self else { return }
+            guard status == .authorized else {
+                DispatchQueue.main.async { self.presentToast("请在系统设置里允许「语音识别」") }
+                return
+            }
+            AVAudioSession.sharedInstance().requestRecordPermission { ok in
+                guard ok else {
+                    DispatchQueue.main.async { self.presentToast("请在系统设置里允许「麦克风」") }
+                    return
+                }
+                DispatchQueue.main.async { self.beginRecognition() }
+            }
+        }
+    }
+
+    private func beginRecognition() {
+        guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+            presentToast("语音识别暂不可用")
+            return
+        }
+        stopVoice()
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            recognitionRequest = request
+
+            let input = audioEngine.inputNode
+            let format = input.outputFormat(forBus: 0)
+            input.removeTap(onBus: 0)
+            input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+                request.append(buffer)
+            }
+            audioEngine.prepare()
+            try audioEngine.start()
+
+            recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                guard let self = self else { return }
+                if let result = result, result.isFinal || error != nil {
+                    let text = result.bestTranscription.formattedString
+                    self.stopVoice()
+                    self.deliverVoice(text)
+                } else if error != nil {
+                    self.stopVoice()
+                }
+            }
+            presentToast("请说出内容，如「加油 300 块」")
+
+            let work = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                if self.audioEngine.isRunning {
+                    self.recognitionRequest?.endAudio()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self.stopVoice() }
+                }
+            }
+            voiceTimer = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 9, execute: work)
+        } catch {
+            stopVoice()
+            presentToast("语音启动失败，请重试")
+        }
+    }
+
+    private func stopVoice() {
+        voiceTimer?.cancel()
+        voiceTimer = nil
+        if audioEngine.isRunning { audioEngine.stop() }
+        audioEngine.inputNode.removeTap(onBus: 0)
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    private func deliverVoice(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            presentToast("没听清，请再说一次")
+            return
+        }
+        let js = "ccVoiceResult(\(WebViewController.jsLiteral(trimmed)));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    private static func jsLiteral(_ s: String) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: [s], options: [])) ?? Data("[\"\"]".utf8)
+        let json = String(data: data, encoding: .utf8) ?? "[\"\"]"
+        return String(json.dropFirst().dropLast())
+    }
+
+    private func makePDF(html: String, name: String) {        PDFExporter.shared.makePDF(html: html, host: view) { [weak self] data in
             guard let self = self else { return }
             guard let data = data else {
                 self.presentToast("PDF 生成失败，请重试")
@@ -233,6 +381,17 @@ extension WebViewController: WKScriptMessageHandler {
             if let dataURL = body["dataURL"] as? String {
                 previewImage(dataURL: dataURL)
             }
+
+        case "schedule":
+            // 网页算好的到期事项，整批交给系统排程
+            let items = body["items"] as? [[String: Any]] ?? []
+            scheduleNotifications(items)
+
+        case "badge":
+            setBadge((body["count"] as? NSNumber)?.intValue ?? 0)
+
+        case "voice":
+            startVoice()
 
         default:
             break

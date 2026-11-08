@@ -16,6 +16,9 @@ tag = sys.argv[3] if len(sys.argv) > 3 else ""
 
 os.makedirs(OUT, exist_ok=True)
 html = io.open(SRC, encoding="utf-8").read()
+# 页面引用了外部脚本，截图目录里也要有一份
+import shutil
+shutil.copy(os.path.join(ROOT, "Resources", "web", "cc-ext.js"), os.path.join(OUT, "cc-ext.js"))
 
 for sc in screens:
     inject = """
