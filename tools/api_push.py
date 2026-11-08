@@ -72,6 +72,11 @@ def main():
 
     entries = []
     for rel in files:
+        # 以 del: 开头的参数表示删除该路径
+        if rel.startswith("del:"):
+            entries.append({"path": rel[4:], "mode": "100644", "type": "blob", "sha": None})
+            print("delete:", rel[4:])
+            continue
         path = os.path.join(ROOT, rel.replace("/", os.sep))
         if not os.path.isfile(path):
             print("skip missing:", rel)

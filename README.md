@@ -63,7 +63,7 @@ iPhone 用 **Safari** 打开 <https://zsonit.github.io/carcare-ios/> → 点「�
 
 ### 方式二：装 IPA（真·原生外壳）
 
-`dist/CheGuanJia-iOS-v2.2.0-b1-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
+`dist/CheGuanJia-iOS-v2.2.0-b2-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
 iOS 强制签名校验，所以需要一个**重签名工具**（Windows 也可以，不需要 Mac）：
 
 1. Windows 装 [Sideloadly](https://sideloadly.io/) 或 爱思助手；
