@@ -4,6 +4,23 @@
 页面沿用开源项目 [kenowong/car-maintenance](https://github.com/kenowong/car-maintenance) 的离线自包含版（`docs/index.html`，MIT 协议），
 外层是原生 iOS 外壳：内置网页通过本机 HTTP 服务加载，浏览器能力由原生桥接实现。
 
+## 界面：iOS 27 Liquid Glass
+
+整站视觉按 iOS 27 的液态玻璃语言重做（只改样式层与图标，业务逻辑一行未动）：
+
+| 元素 | 做法 |
+| --- | --- |
+| 背景 | 多层柔和光斑墙纸（蓝 / 紫 / 青 / 暖橙径向渐变），给玻璃提供可折射的底层 |
+| 卡片 / 弹窗 / 顶栏 | `backdrop-filter: blur(26px) saturate(190%)` + 半透明白渐变 + 1px 高光内描边 + 柔和投影 |
+| 底部导航 | 悬浮玻璃胶囊，选中项是白色玻璃「镜头」高亮，图标换成 1.85px 线性 SVG |
+| 控件 | 胶囊按钮（主按钮带玻璃高光与彩色投影）、iOS 尺寸开关（51×31）、系统蓝分段控件 |
+| 弹窗 | 底部玻璃 sheet，32px 圆角 + 抓取条 + 背景模糊压暗 |
+| 动效 | 页面切换 0.3s 弹簧淡入、按压 0.97 缩放，并遵循 `prefers-reduced-motion` |
+
+| 提醒中心 | 维保服务 | 档案管理 | 成本统计 | 设置 |
+| --- | --- | --- | --- | --- |
+| ![提醒中心](screenshots/1-reminders.jpg) | ![维保服务](screenshots/2-services.jpg) | ![档案管理](screenshots/3-archive.jpg) | ![成本统计](screenshots/4-finance.jpg) | ![设置](screenshots/5-settings.jpg) |
+
 ## 功能对照（与安卓版逐项一致）
 
 | 模块 | 功能 |
@@ -63,7 +80,7 @@ iPhone 用 **Safari** 打开 <https://zsonit.github.io/carcare-ios/> → 点「�
 
 ### 方式二：装 IPA（真·原生外壳）
 
-`dist/CheGuanJia-iOS-v2.2.0-b2-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
+`dist/CheGuanJia-iOS-v2.2.0-b3-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
 iOS 强制签名校验，所以需要一个**重签名工具**（Windows 也可以，不需要 Mac）：
 
 1. Windows 装 [Sideloadly](https://sideloadly.io/) 或 爱思助手；

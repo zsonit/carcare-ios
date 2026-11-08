@@ -25,7 +25,8 @@
     try {
       var style = document.createElement('style');
       style.textContent = '#installCard{display:none!important}' +
-        'input,select,textarea{font-size:16px!important}'; /* 避免 iOS 聚焦表单时自动放大页面 */
+        /* 避免 iOS 聚焦输入框时自动放大页面；select 不弹键盘，保持设计字号 */
+        'input:not([type=checkbox]):not([type=radio]),textarea{font-size:16px!important}';
       host.appendChild(style);
       styleInjected = true;
     } catch (e) {}
