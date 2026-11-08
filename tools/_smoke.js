@@ -1,0 +1,30 @@
+(function(){
+  var errs=[];
+  function T(name,fn){ try{ fn(); }catch(e){ errs.push(name+': '+e.message); } }
+  T('demo',function(){ loadDemo(); });
+  ['reminders','services','archive','finance','settings'].forEach(function(s){ T('screen-'+s,function(){showScreen(s);}); });
+  T('doc',function(){ openDocModal(); closeModal(); });
+  T('tire',function(){ openTireModal(); closeModal(); openTireLog(); closeModal(); });
+  T('part',function(){ openPartModal(); closeModal(); });
+  T('plan',function(){ openPlanModal(); closeModal(); });
+  T('odo',function(){ openOdoModal(); closeModal(); });
+  T('manual',function(){ openManual('symptoms'); closePage(); });
+  T('rec-fuel',function(){ pickRec('fuel'); });
+  T('rec-cost',function(){ pickRec('cost'); });
+  T('repair',function(){ setKind('repair'); setKind('service'); });
+  T('season',function(){ toggleSeason(0); toggleSeason(0); });
+  T('cal',function(){ calMove(1); calMove(-1); });
+  T('plan-use',function(){ var p=DB.plans[0]; if(p) usePlan(p.id); });
+  T('noti',function(){ buildNotiList(); reSchedule(); });
+  T('finance-extra',function(){ updateFinanceExtra(); });
+  T('oil',function(){ renderOilStats(); });
+  T('history',function(){ pickHist('fuel'); pickHist('all'); });
+  T('save-fuel',function(){ pickRec('fuel'); document.getElementById('fMile').value=33000; document.getElementById('fLiters').value=40; document.getElementById('fAmt').value=310; saveFuel(); });
+  T('save-cost',function(){ pickRec('cost'); document.getElementById('cAmt2').value=88; saveCost2(); });
+  T('save-doc',function(){ openDocModal(); document.getElementById('dName').value='测试保单'; document.getElementById('dExp').value='2027-01-01'; saveDoc(''); });
+  T('build-noti',function(){ var n=buildNotiList(); if(!n.length) errs.push('noti-empty'); });
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#fff;color:#111;font:13px monospace;padding:8px;white-space:pre-wrap';
+  d.textContent = errs.length? ('ERRORS ('+errs.length+'):\n'+errs.join('\n')) : 'ALL OK';
+  document.body.appendChild(d);
+})();
