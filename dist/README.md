@@ -2,7 +2,7 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `CheGuanJia-iOS-v2.2.0-b5-unsigned.ipa` | 未签名 IPA，由 GitHub Actions（macOS）编译，需重签名后安装 |
+| `CheGuanJia-iOS-v2.3.0-b7-unsigned.ipa` | 未签名 IPA，由 GitHub Actions（macOS）编译，需重签名后安装 |
 
 ## 方式一：不用签名，直接在 iPhone 上装（推荐先试这个）
 
