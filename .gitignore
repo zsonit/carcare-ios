@@ -1,0 +1,12 @@
+.DS_Store
+build/
+*.xcodeproj
+*.xcworkspace
+Payload/
+*.ipa
+!dist/*.ipa
+build.log
+DerivedData/
+tools/_shield.png
+tools/icon_A.png
+tools/icon_B.png
