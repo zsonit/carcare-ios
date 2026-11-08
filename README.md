@@ -52,7 +52,26 @@ project.yml               XcodeGen 工程描述
 git push origin main      # 自动构建，产物：Actions → carcare-ipa-unsigned
 ```
 
-安装：用 Sideloadly / AltStore / iOS App Signer 等工具，以你自己的开发者证书重签名后装到 iPhone。
+## 两种装法（都不需要 Mac）
+
+### 方式一：直接添加到主屏幕（最快，零签名）
+
+iPhone 用 **Safari** 打开 <https://zsonit.github.io/carcare-ios/> → 点「分享」→「添加到主屏幕」。
+
+得到图标独立的 App 体验，Service Worker 首次加载后完全离线可用，数据本地保存。
+无需 Apple ID、无需电脑、不会 7 天过期。
+
+### 方式二：装 IPA（真·原生外壳）
+
+`dist/CheGuanJia-iOS-v2.2.0-b1-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
+iOS 强制签名校验，所以需要一个**重签名工具**（Windows 也可以，不需要 Mac）：
+
+1. Windows 装 [Sideloadly](https://sideloadly.io/) 或 爱思助手；
+2. 手机数据线连电脑，把 IPA 拖进工具，填自己的 Apple ID；
+3. 工具自动签名并安装到手机。
+
+免费 Apple ID 签名 7 天有效，到期重新点一次即可；付费开发者账号 1 年。
+装完首次打开需在「设置 → 通用 → VPN与设备管理」里信任证书。
 
 ## 网页资源升级
 
