@@ -899,7 +899,7 @@
       + '<button class="btn ghost" onclick="ccAiClear()">清空对话</button>'
       + '</div>'
       + '<div class="note" id="aiCfgState">状态：未配置</div>'
-      + '<div class="ai-cfgnote">Key 只存在这台手机上，不进数据备份、不上传任何服务器。留空则模型名/接口地址用默认值；换模型只改模型名即可。</div>';
+      + '<div class="ai-cfgnote">Key 只存在这台手机上，不进数据备份、不上传任何服务器。留空则模型名/接口地址用默认值；换模型只改模型名即可。' + (window.__ccNative ? '' : '<br>网页版受浏览器跨域限制，多数国内服务商无法直连，建议装 App 使用。') + '</div>';
     updatePills();
   }
 
@@ -1014,6 +1014,7 @@
     return '<div class="ai-onboard" id="aiOnboard">'
       + '<h4>先接入一个模型</h4>'
       + '<p>选一家服务商，把 API Key 填进去就能用。推荐智谱 GLM-4-Flash（长期免费、国内直连）。Key 只存本机。</p>'
+      + (window.__ccNative ? '' : '<p style="color:#9a6700">你现在是网页版：浏览器的跨域限制会让多数国内服务商直接失败，只有 OpenRouter、Gemini 这类允许跨域的能直连。装成 App 后不受限制。</p>')
       + '<div class="provs">' + keys.map(function (k) {
         return '<button class="prov' + (c.provider === k ? ' on' : '') + '" onclick="ccAiPickProvider(\'' + k + '\');ccAiOpenCfg()">'
           + '<b>' + esc(PROV[k].name) + '</b><span>' + esc(PROV[k].tip) + '</span></button>';
