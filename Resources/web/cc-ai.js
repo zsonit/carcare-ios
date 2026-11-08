@@ -1079,8 +1079,11 @@
         var now = Date.now();
         if (now - lastPaint < 60) return;
         lastPaint = now;
-        var show = splitReply(full);
-        if (bub) { bub.innerHTML = mdLite(show.text) + '<span class="ai-cursor"></span>'; toBottom(); }
+        /* 流式过程中动作 JSON 还没写完，先把 ``` 之后的内容藏起来 */
+        var raw = String(full || '');
+        var cut = raw.indexOf('```');
+        var visible = cut >= 0 ? raw.slice(0, cut) : raw;
+        if (bub) { bub.innerHTML = mdLite(visible) + '<span class="ai-cursor"></span>'; toBottom(); }
       },
       onDone: function (full, err) {
         if (sendBtn) sendBtn.disabled = false;
