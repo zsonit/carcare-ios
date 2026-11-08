@@ -408,16 +408,48 @@
     box-shadow:0 18px 36px -14px rgba(16,44,80,.45),0 4px 12px -6px rgba(16,44,80,.25),inset 0 1px 0 rgba(255,255,255,.95);
   }
   nav button{
-    position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
     padding:7px 2px 5px;border-radius:22px;color:var(--sub);font-size:10.5px;font-weight:650;letter-spacing:.1px;
-    transition:color .2s ease,background .2s ease,box-shadow .2s ease;
+    -webkit-tap-highlight-color:transparent;
+    transition:color .32s cubic-bezier(.32,.72,0,1);
   }
-  nav button .ic{font-size:0;line-height:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+  nav button .ic{
+    font-size:0;line-height:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+    transition:transform .34s cubic-bezier(.32,1.34,.36,1);
+  }
   nav button .ic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
-  nav button.on{
-    color:var(--pri-d);
-    background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.66));
-    box-shadow:inset 0 1px 0 #fff,0 4px 12px -6px rgba(16,44,80,.4),0 0 0 1px rgba(10,132,255,.14);
+  nav button.on{color:var(--pri-d)}
+  nav button.on .ic{transform:translateY(-.5px) scale(1.04)}
+  nav button:active .ic{transform:scale(.88)}
+
+  /* 液态玻璃镜头：在按钮之间滑行，带拖尾与挤压回弹 */
+  #navLens,#navLensTrail{
+    position:absolute;left:0;top:0;z-index:1;pointer-events:none;border-radius:22px;
+    transition:transform .52s cubic-bezier(.3,1.42,.42,1),
+               width .52s cubic-bezier(.3,1.42,.42,1),
+               height .52s cubic-bezier(.3,1.42,.42,1);
+  }
+  #navLens .lens-fill{
+    position:absolute;inset:0;border-radius:inherit;transform-origin:50% 58%;
+    background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(255,255,255,.6));
+    box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 rgba(255,255,255,.55),
+               0 5px 16px -7px rgba(16,44,80,.45),0 0 0 1px rgba(10,132,255,.16);
+    will-change:transform;
+  }
+  #navLens .lens-fill::after{
+    content:'';position:absolute;inset:0;border-radius:inherit;
+    background:radial-gradient(130% 86% at 50% -28%,rgba(255,255,255,.95),rgba(255,255,255,0) 62%);
+  }
+  #navLensTrail{
+    z-index:0;background:rgba(255,255,255,.55);
+    -webkit-filter:blur(7px);filter:blur(7px);opacity:.6;
+    transition:transform .72s cubic-bezier(.26,1.14,.4,1),
+               width .72s cubic-bezier(.26,1.14,.4,1),
+               height .72s cubic-bezier(.26,1.14,.4,1);
+  }
+  @media(prefers-reduced-motion:reduce){
+    #navLens,#navLensTrail{transition-duration:.01s!important}
+    nav button,nav button .ic{transition-duration:.01s}
   }
   nav button .dot{
     position:absolute;top:5px;right:calc(50% - 15px);width:8px;height:8px;border-radius:50%;
@@ -648,7 +680,8 @@
   </main>
 
   <nav id="nav">
-    <button class="on" data-screen="reminders" onclick="showScreen('reminders')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6.2-2.4 7.9-2.4 7.9h16.8S18 14.8 18 8.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></svg></span>提醒中心<span class="dot hidden" id="navDot"></span></button>
+    <div id="navLensTrail" aria-hidden="true"></div>
+    <div id="navLens" aria-hidden="true"><i class="lens-fill"></i></div>    <button class="on" data-screen="reminders" onclick="showScreen('reminders')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6.2-2.4 7.9-2.4 7.9h16.8S18 14.8 18 8.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></svg></span>提醒中心<span class="dot hidden" id="navDot"></span></button>
     <button data-screen="services" onclick="showScreen('services')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 6.3a1 1 0 0 0 0 1.4l1.7 1.7a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8L6.7 20.4a2.1 2.1 0 0 1-3-3l6.8-6.8a6 6 0 0 1 8-8z"/></svg></span>维保服务</button>
     <button data-screen="archive" onclick="showScreen('archive')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h4.2l2 2.6H19a2 2 0 0 1 2 2z"/></svg></span>档案管理</button>
     <button data-screen="finance" onclick="showScreen('finance')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-5"/></svg></span>成本统计</button>
@@ -1411,10 +1444,75 @@ function resetAll(){
 }
 
 /* ============ 导航与启动 ============ */
+/* 液态玻璃镜头：滑到当前 tab，带拖尾、撞击挤压与回弹 */
+let _lensReady=false,_lensRaf=0;
+function moveNavLens(instant){
+  const nav=document.getElementById('nav');
+  const lens=document.getElementById('navLens');
+  const trail=document.getElementById('navLensTrail');
+  if(!nav||!lens)return;
+  const btn=nav.querySelector('button.on');
+  if(!btn)return;
+  const nb=nav.getBoundingClientRect(), rb=btn.getBoundingClientRect();
+  if(!nb.width||!rb.width)return;              /* 页面还没排版，等下一次 */
+  const w=Math.round(rb.width), h=Math.round(rb.height);
+  const x=Math.round(rb.left-nb.left), y=Math.round(rb.top-nb.top);
+  const prevX=parseFloat(lens.dataset.lastX||'');
+  const far=isNaN(prevX)?999:Math.abs(prevX-x);
+  lens.dataset.lastX=x;
+  if(!_lensReady)instant=true;
+  if(instant){
+    [lens,trail].forEach(el=>{ if(el)el.style.transition='none'; });
+  }
+  const br=getComputedStyle(btn).borderRadius;
+  [lens,trail].forEach(el=>{
+    if(!el)return;
+    el.style.width=w+'px'; el.style.height=h+'px';
+    if(br)el.style.borderRadius=br;               /* 跟随按钮圆角（手机 22px / 桌面 18px） */
+    el.style.transform='translate('+x+'px,'+y+'px)';
+  });
+  if(instant){
+    void lens.offsetWidth;                        /* 强制落位，避免首帧从 (0,0) 滑进来 */
+    [lens,trail].forEach(el=>{ if(el)el.style.transition=''; });
+    _lensReady=true;
+    return;
+  }
+  /* 液滴受到惯性挤压：横向拉长、纵向压扁，再回弹归位 */
+  const fill=lens.querySelector('.lens-fill');
+  if(fill&&fill.animate){
+    if(far>4){
+      fill.animate([
+        {transform:'scale(1,1)'},
+        {transform:'scale(1.1,.9)',offset:.26},
+        {transform:'scale(.975,1.045)',offset:.64},
+        {transform:'scale(1,1)'}
+      ],{duration:560,easing:'cubic-bezier(.33,.9,.32,1)'});
+    }
+  }
+}
+function popNavIcon(btn){
+  const ic=btn&&btn.querySelector('.ic');
+  if(!ic||!ic.animate)return;
+  ic.animate([
+    {transform:'scale(.9)'},
+    {transform:'scale(1.09)',offset:.5},
+    {transform:'scale(1)'}
+  ],{duration:430,easing:'cubic-bezier(.34,1.3,.38,1)'});
+}
+window.addEventListener('resize',()=>{
+  cancelAnimationFrame(_lensRaf);
+  _lensRaf=requestAnimationFrame(()=>moveNavLens(true));
+});
+window.addEventListener('orientationchange',()=>setTimeout(()=>moveNavLens(true),260));
+
 function showScreen(s){
   document.querySelectorAll('.screen').forEach(x=>x.classList.add('hidden'));
   document.getElementById('screen-'+s).classList.remove('hidden');
+  const prev=document.querySelector('#nav button.on');
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.screen===s));
+  const now=document.querySelector('#nav button.on');
+  if(now&&now!==prev){moveNavLens();popNavIcon(now);}
+  else if(!_lensReady)moveNavLens(true);
   document.getElementById('fab').classList.toggle('hidden',s!=='reminders');
   if(s==='reminders')renderReminders();
   if(s==='archive')renderArchive();
