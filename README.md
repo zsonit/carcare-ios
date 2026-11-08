@@ -21,6 +21,52 @@
 | --- | --- | --- | --- | --- |
 | ![提醒中心](screenshots/1-reminders.jpg) | ![记录](screenshots/2-records.jpg) | ![车库](screenshots/3-garage.jpg) | ![花费](screenshots/4-costs.jpg) | ![设置](screenshots/5-settings.jpg) |
 
+| AI 车况助手 |
+| --- |
+| ![AI 车况助手](screenshots/6-ai.jpg) |
+
+## 2.4.0：内置 AI 车况助手（读得到全部记录，也动手记账）
+
+把一个大模型接进了 App。它看得到这台车的每一条数据，能回答车况问题、给保养建议，
+也能按你说的一句话直接把记录写进去。
+
+| 能力 | 说明 |
+| --- | --- |
+| 全量数据上下文 | 每次提问自动把当前车辆压成一段紧凑 JSON 交给模型：车辆信息、保养提醒及剩余公里 / 天数、最近 20 条维保、最近 10 次加油与油耗统计、轮胎花纹与胎压、配件保修、证照到期、费用汇总、套餐余额。模型不用猜，也不用你复述 |
+| 车况问诊 | 「现在车况怎么样」「下次该保养什么」「油耗正常吗」→ 先给结论，再给具体数字（还剩多少公里、多少天、上次多少），发现异常主动点出风险 |
+| 动手记账 | 说「昨天加满 313 块 95 号」「把机油改成 6 个月」，模型返回结构化动作，App 渲染成确认卡片，**点「应用」才真正写库**，不会偷偷改你的账 |
+| 可执行动作 | 新增保养 / 维修工单、加油、其它费用、里程打卡、改保养周期、标记某项保养已完成、更新车辆信息、跳转页面 |
+| 流式输出 | 请求走原生代发，SSE 逐字显示，不用等整段生成完 |
+| 免费可用 | 内置 7 家 OpenAI 兼容服务商预设，默认**智谱 GLM-4-Flash（长期免费、国内直连）**；模型名与接口地址都可改，自建网关 / 中转也能接 |
+| 离线兜底 | 没配 Key 也能用：首页卡的「本地体检」按规则算出最紧要的提醒、油耗与最近一次到店，纯本地计算 |
+| 隐私 | API Key 只存这台手机（独立存储，不进数据备份、不上传任何服务器）；对话记录同样只在本机 |
+
+### 支持的服务商（都走 OpenAI 兼容协议，只换地址与模型名）
+
+| 预设 | 默认模型 | 免费情况（以各家控制台为准） |
+| --- | --- | --- |
+| 智谱 GLM | `glm-4-flash` | GLM-4-Flash 长期免费，国内直连，额度够个人日常用 |
+| 硅基流动 | `Qwen/Qwen3-8B` | 十余个小模型永久免费，国内直连 |
+| 火山方舟（豆包） | `doubao-lite-32k` | Lite 每日免费额度较大；模型名要填控制台里的接入点 ID |
+| DeepSeek | `deepseek-chat` | 不免费但极便宜（百万 token 几毛钱） |
+| Groq | `llama-3.3-70b-versatile` | 免费开发者层，需能访问境外网络 |
+| OpenRouter | `deepseek/deepseek-chat-v3.1:free` | 带 `:free` 后缀的模型每天有免费次数 |
+| Google Gemini | `gemini-2.5-flash` | AI Studio 免费层，需能访问境外网络 |
+| 自定义 | — | 任何兼容 `/chat/completions` 的地址 |
+
+### 为什么大模型请求要绕道原生
+
+WebView 里直接 `fetch` 大模型 API 会被 **CORS** 拦死（服务端不返回 `Access-Control-Allow-Origin`）。
+所以网页只负责组装请求，实际发送交给原生：
+
+```
+网页 cc-ai.js  ──{type:'ai',url,headers,body}──▶  iOS AIClient / Android AIHttp
+                                                        │  URLSession / HttpURLConnection
+                                                        ▼
+                                              边收边回吐 ccAiChunk(id,text)
+网页解析 SSE 的 data: 行，逐字渲染 ◀──────────────────────────┘
+```
+
 ## 2.3.0：从「保养记录本」升级成完整的养车工具
 
 在原有 5 个模块的基础上，补齐了汽车保养 / 维修类应用该有的 19 项能力。
@@ -75,6 +121,7 @@
 | 成本统计 | 累计 / 本月养车费用、按类别占比、按月 / 按年柱状图、手动记账（油费 / 保险 / 维修 / 停车过路 / 其他） |
 | 设置 | 保养规则（按车型自定义周期）、消息推送、导出 CSV、导出 PDF、导入备份、示例数据、清空数据 |
 | NAS 同步 | 本机 + NAS 双份存储、服务器地址 + 访问密钥、测试连接 / 立即同步 / 上次同步状态 |
+| AI 车况助手 | 全量记录作为上下文问诊、流式回答、可执行动作（确认后写库）、7 家服务商预设 + 自定义地址、离线本地体检 |
 
 ## iOS 侧的原生适配（浏览器版做不到的部分）
 
@@ -89,6 +136,7 @@
 | 消息推送通知 | `Notification` API 桥接到系统本地通知（前台也会弹出横幅） |
 | 安装到主屏卡片 | 隐藏（本身就是独立 App，与安卓 WebView 版处理一致） |
 | NAS 局域网访问 | 允许 HTTP 明文与局域网访问（`NSAllowsArbitraryLoadsInWebContent` + 本地网络权限说明） |
+| 大模型 API（CORS） | 网页直连会被跨域拦死，改由 `AIClient` 用 `URLSession.bytes` 代发 + 流式回吐 `ccAiChunk` |
 
 ## 目录结构
 
@@ -96,10 +144,11 @@
 CarCare/                  原生源码
   AppDelegate.swift       启动、窗口、本地通知授权
   WebViewController.swift WKWebView 容器 + 全部原生桥接
+  AIClient.swift          大模型请求代发（URLSession 流式 + 增量回吐）
   LocalHTTPServer.swift   零依赖本地 HTTP 服务（Network.framework）
   PDFExporter.swift       HTML → PDF
   ImagePreviewController.swift  凭证图查看器
-Resources/web/            内置网页（index.html / bridge.js / 图标）
+Resources/web/            内置网页（index.html / bridge.js / cc-ext.js / cc-ai.js / 图标）
 tools/                    图标生成、网页资源同步脚本
 project.yml               XcodeGen 工程描述
 .github/workflows/build-ipa.yml   Actions 出包
@@ -124,7 +173,7 @@ iPhone 用 **Safari** 打开 <https://zsonit.github.io/carcare-ios/> → 点「�
 
 ### 方式二：装 IPA（真·原生外壳）
 
-`dist/CheGuanJia-iOS-v2.3.0-b7-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
+`dist/CheGuanJia-iOS-v2.4.0-b8-unsigned.ipa` 是 GitHub Actions 编译出的未签名包。
 iOS 强制签名校验，所以需要一个**重签名工具**（Windows 也可以，不需要 Mac）：
 
 1. Windows 装 [Sideloadly](https://sideloadly.io/) 或 爱思助手；

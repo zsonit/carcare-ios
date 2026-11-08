@@ -6,7 +6,8 @@ SRC = os.path.join(ROOT, "Resources", "web", "index.html")
 CHROME = r"C:/Program Files/Google/Chrome/Application/chrome.exe"
 OUT = os.path.join(ROOT, "tools", "_shots")
 os.makedirs(OUT, exist_ok=True)
-shutil.copy(os.path.join(ROOT, "Resources", "web", "cc-ext.js"), os.path.join(OUT, "cc-ext.js"))
+for _f in ("cc-ext.js", "cc-ai.js"):
+    shutil.copy(os.path.join(ROOT, "Resources", "web", _f), os.path.join(OUT, _f))
 
 sc = sys.argv[1] if len(sys.argv) > 1 else "reminders"
 h = int(sys.argv[2]) if len(sys.argv) > 2 else 2400
@@ -22,6 +23,7 @@ nav{right:auto;width:378px;position:fixed;bottom:8px}
 .fab{right:auto;left:314px}
 .modal{right:auto;width:390px}
 .page{right:auto;width:390px}
+.ai-page{right:auto;width:390px}
 .page-head{right:auto;width:390px}
 .page-body{max-width:390px}
 .screen{animation:none!important}
@@ -37,6 +39,6 @@ png = os.path.join(OUT, "full_%s.png" % tag)
 subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars",
                 "--force-device-scale-factor=2", "--window-size=390,%d" % h,
                 "--virtual-time-budget=3500", "--screenshot=" + png,
-                "file:///" + os.path.abspath(tmp).replace("\\", "/")],
+                "file:///" + os.path.abspath(tmp).replace("\\", "/") + "#aitest"],
                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120)
 print("shot:", png, os.path.getsize(png) if os.path.exists(png) else "FAIL")

@@ -393,6 +393,18 @@ extension WebViewController: WKScriptMessageHandler {
         case "voice":
             startVoice()
 
+        case "ai":
+            // 大模型请求由原生代发（WebView 直连会被 CORS 拦），流式回吐给网页
+            let id = body["id"] as? String ?? ""
+            let url = body["url"] as? String ?? ""
+            let payload = body["body"] as? String ?? "{}"
+            let headers = body["headers"] as? [String: String] ?? [:]
+            AIClient.shared.start(id: id, url: url, headers: headers,
+                                  body: payload, webView: self.webView)
+
+        case "aiAbort":
+            AIClient.shared.cancel(id: body["id"] as? String ?? "")
+
         default:
             break
         }

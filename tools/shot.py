@@ -18,7 +18,8 @@ os.makedirs(OUT, exist_ok=True)
 html = io.open(SRC, encoding="utf-8").read()
 # 页面引用了外部脚本，截图目录里也要有一份
 import shutil
-shutil.copy(os.path.join(ROOT, "Resources", "web", "cc-ext.js"), os.path.join(OUT, "cc-ext.js"))
+for _f in ("cc-ext.js", "cc-ai.js"):
+    shutil.copy(os.path.join(ROOT, "Resources", "web", _f), os.path.join(OUT, _f))
 
 for sc in screens:
     inject = """
@@ -28,6 +29,8 @@ html,body{max-width:390px;overflow-x:hidden}
 nav{right:auto;width:378px}
 .fab{right:auto;left:314px}
 .modal{right:auto;width:390px}
+.ai-page{right:auto;width:390px}
+.ai-cfgrow input,.ai-cfgrow select{max-width:210px}
 .modal .sheet{max-width:390px;animation:none!important}
 .screen{animation:none!important}
 *{transition:none!important}
