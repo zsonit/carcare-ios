@@ -144,7 +144,7 @@
       + '.st-big em{font-style:normal;font-size:10px;font-weight:700;color:#8a99ad;margin-right:3px}'
       + '.st-big i{font-style:normal;font-size:10.5px;font-weight:700}'
       + '.st-big-no{font-size:12px}'
-      + '.st-cta{font-size:10.5px;font-weight:700;color:#e8590c;background:#fff1e6;border-radius:6px;padding:1px 7px}'
+      + '.st-after{font-size:11px;font-weight:800;color:#1d7a3c;background:#e9f7ee;border-radius:6px;padding:1px 7px;white-space:nowrap}'
       + '.oil-src{color:#a9b6c8}'
       + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
       + '.oil-keyrow{margin-top:10px}'
@@ -626,11 +626,14 @@
       var v = lastOil[sel];
       return v ? Number(v).toFixed(2) : '';
     }
+    var DISC = { sinopec: 0.30, petro: 0.40, cnooc: 0.50, bp: 0.40, shell: 0.60, other: 1.20, gas: 0 };
     function stationRowsHTML(list, src) {
       return list.map(function (st) {
         var br = st.brand || brandOf(st.name);
         var price = fuelPrice(fuelSel);
         var fl = fuelSel === '0' ? '0号' : fuelSel + '号';
+        var after = '';
+        if (price && DISC[br.k]) after = '<span class="st-after">券后约 &yen;' + (Number(price) - DISC[br.k]).toFixed(2) + '</span>';
         var thumb = '<div class="st-th" style="background:' + br.c + '"><i>' + br.t + '</i>'
           + (st.photo ? '<img src="' + esc(st.photo) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : '')
           + '</div>';
@@ -644,14 +647,14 @@
           + (price
             ? '<span class="st-big"><em>' + fl + '</em>&yen;' + price + '<i>/L</i></span>'
             : '<span class="st-big st-big-no">查优惠</span>')
-          + '<span class="st-cta">券后价 &rsaquo;</span>'
+          + after
           + '</div></div>';
       }).join('')
         + (list.length < 5
           ? '<div class="oil-fallback">周边油站较少，已按最远 ' + lastR + ' 公里查询。点下面按钮在高德地图里看完整列表。</div>'
             + '<button class="srv-btn" id="oilMapMore">在高德地图看更多加油站</button>'
           : '')
-        + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；每家油站自己的券后价只在高德体系内，点站点直接跳该站高德页查看实时优惠。</div>'
+        + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；下方「券后约」按各品牌常见优惠幅度预估（两桶油约降 3~4 毛、壳牌/海油约降 5~6 毛、民营站约降 1 块多），实际以油站当天活动为准，点站点可跳高德查看实时优惠。</div>'
         + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
     }
     function renderList() {
