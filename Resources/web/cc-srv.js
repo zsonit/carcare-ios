@@ -87,9 +87,18 @@
       + '.srv-sh-close{font-size:13.5px;font-weight:700;color:#0a6fd8;padding:6px 12px;border-radius:999px;border:0;'
       + 'background:rgba(10,132,255,.11)}'
       + '.srv-frow{margin:10px 0}.srv-frow label{display:block;font-size:12.5px;font-weight:700;color:#41536b;margin-bottom:5px}'
-      + '.srv-frow input,.srv-frow select,.srv-frow textarea{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;'
-      + 'border:1px solid #cfdaea;background:#fff;font-size:15px;color:#1b2a3d;outline:none;font-family:inherit}'
+      + '.srv-frow input,.srv-frow select,.srv-frow textarea,.srv-frow2 input,.srv-frow2 select,.srv-frow3 input,.srv-frow3 select'
+      + '{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid #cfdaea;background:#fff;'
+      + 'font-size:15px;color:#1b2a3d;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}'
       + '.srv-frow textarea{resize:vertical;min-height:72px}'
+      + '.srv-glabel{display:inline-flex;align-items:center;padding:4px 10px 4px 9px;margin:16px 0 8px;border-radius:4px 10px 10px 4px;'
+      + 'background:rgba(10,132,255,.10);border-left:3px solid #0a84ff;font-size:12.5px;font-weight:800;color:#0a6fd8}'
+      + '.srv-lead{font-size:12.5px;color:#5b7089;line-height:1.6;margin:2px 0 2px}'
+      + '.srv-frow2,.srv-frow3{display:flex;gap:8px;margin:10px 0}'
+      + '.srv-frow2>*,.srv-frow3>*{flex:1;min-width:0}'
+      + '.srv-unit{display:flex;align-items:center;gap:8px}'
+      + '.srv-unit input{flex:1;min-width:0}'
+      + '.srv-unit .u{flex:none;font-size:13.5px;font-weight:800;color:#41536b;padding-right:2px}'
       + '.srv-seg{display:flex;flex-wrap:wrap;gap:8px}'
       + '.srv-seg button{padding:8px 14px;border-radius:999px;border:1px solid #c9d6e8;background:#fff;font-size:13.5px;'
       + 'font-weight:700;color:#41536b}'
@@ -151,7 +160,7 @@
     { id: 'rem', g: 'srv-g2', ic: 'bell', t: '智能提醒', d: '车检年检保险不遗忘', fn: openRemind },
     { id: 'report', g: 'srv-g3', ic: 'doc', t: '报告解读', d: '专业解读，科学分析，智慧养护', fn: openReport },
     { id: 'pick', g: 'srv-g4', ic: 'pick', t: 'AI选车', d: 'AI帮您选到心仪的车', fn: openPick, tag: '+100' },
-    { id: 'used', g: 'srv-g2', ic: 'price', t: 'AI旧车估价', d: 'AI帮您评估旧车价值', fn: openUsed },
+    { id: 'used', g: 'srv-g2', ic: 'price', t: 'AI卖车助手', d: 'AI帮您评估旧车卖价', fn: openUsed },
     { id: 'photo', g: 'srv-g1', ic: 'cam', t: '拍照问AI', d: '拍照问车，秒懂疑难', fn: openPhoto },
     { id: 'sos', g: 'srv-g2', ic: 'sos', t: '极速救援', d: '一键拨打，救援极达', fn: openSOS },
     { id: 'writer', g: 'srv-g3', ic: 'pen', t: 'AI写手', d: '一键生成事故报告 | 行车总结', fn: openWriter }
@@ -470,29 +479,76 @@
    * ------------------------------------------------------------------ */
   function openUsed() {
     var conds = ['优秀（准新车）', '良好（正常使用）', '一般（明显使用痕迹）', '有过事故或大修'];
-    var inner = '<div class="srv-frow"><label>品牌车型</label><input id="usedModel" placeholder="如：大众 迈腾 330TSI 领先型"></div>'
-      + '<div class="srv-frow"><label>上牌年份</label><input id="usedYear" type="number" inputmode="numeric" placeholder="如：2021"></div>'
-      + '<div class="srv-frow"><label>当前里程（万公里）</label><input id="usedKm" type="number" inputmode="decimal" placeholder="如：6.5"></div>'
-      + '<div class="srv-frow"><label>车况</label><div class="srv-seg" id="usedCond">'
+    var provinces = ['北京', '上海', '天津', '重庆', '广东', '江苏', '浙江', '四川', '山东', '河南', '湖北', '湖南', '河北', '山西', '陕西', '安徽', '福建', '江西', '辽宁', '吉林', '黑龙江', '广西', '海南', '贵州', '云南', '甘肃', '青海', '内蒙古', '宁夏', '新疆', '西藏', '中国香港', '中国澳门', '中国台湾'];
+    var colors = ['黑色', '白色', '灰色', '银色', '红色', '蓝色', '绿色', '棕色', '其他'];
+    var energies = ['燃油', '纯电', '插电混动', '油电混动', '增程'];
+    var curY = new Date().getFullYear();
+    function yearArr(from) { var a = []; for (var y = curY; y >= from; y--) a.push(String(y)); return a; }
+    function opts(arr, def) {
+      return arr.map(function (x) { return '<option value="' + esc(x) + '"' + (x === def ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+    }
+    function glabel(t) { return '<div class="srv-glabel">' + esc(t) + '</div>'; }
+    var years = yearArr(2006);
+    var months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+    var inner = '<div class="srv-lead">品牌、车型、上牌时间、里程和所在城市会直接影响估值区间，填得越全越准。</div>'
+      + glabel('品牌、车型、年款')
+      + '<div class="srv-frow3">'
+      + '<input id="usedBrand" placeholder="品牌">'
+      + '<input id="usedModel" placeholder="如：迈腾 330TSI">'
+      + '<select id="usedVYear" title="年款">' + opts(years, String(curY - 3)) + '</select>'
+      + '</div>'
+      + glabel('上牌时间、里程、城市')
+      + '<div class="srv-frow2">'
+      + '<select id="usedRegY" title="上牌年份">' + opts(years, String(curY - 3)) + '</select>'
+      + '<select id="usedRegM" title="上牌月份">' + opts(months, '1月') + '</select>'
+      + '</div>'
+      + '<div class="srv-frow srv-unit"><input id="usedKm" type="number" inputmode="numeric" placeholder="已行驶里程，如 65000"><span class="u">公里</span></div>'
+      + '<div class="srv-frow2">'
+      + '<select id="usedProv" title="省份">' + opts(provinces, '四川') + '</select>'
+      + '<input id="usedCity" placeholder="市/区，如：成都">'
+      + '</div>'
+      + glabel('颜色、能源、版本')
+      + '<div class="srv-frow3">'
+      + '<select id="usedColor" title="颜色">' + opts(colors, '黑色') + '</select>'
+      + '<select id="usedEnergy" title="能源类型">' + opts(energies, '燃油') + '</select>'
+      + '<input id="usedTrim" placeholder="版本，如舒适版">'
+      + '</div>'
+      + glabel('车况')
+      + '<div class="srv-frow"><div class="srv-seg" id="usedCond">'
       + conds.map(function (c, i) { return '<button data-v="' + c + '"' + (i === 1 ? ' class="on"' : '') + '>' + c.split('（')[0] + '</button>'; }).join('')
       + '</div></div>'
-      + '<div class="srv-frow"><label>所在城市（选填）</label><input id="usedCity" placeholder="影响区域行情"></div>'
+      + glabel('购车价、购车时间（选填）')
+      + '<div class="srv-frow2">'
+      + '<div class="srv-unit"><input id="usedBuyP" type="number" inputmode="decimal" placeholder="输入更精准"><span class="u">万元</span></div>'
+      + '<select id="usedBuyY" title="购车年份"><option value="">不确定</option>' + opts(years, String(curY - 3)) + '</select>'
+      + '</div>'
+      + '<div class="srv-hint">购车价不确定可以先留空，填写后基础估值会更精准；购车时间默认跟随上牌年份。</div>'
       + '<button class="srv-btn" id="usedGo">开始估价</button>'
       + '<div class="srv-out" id="usedOut" style="display:none"></div>'
       + '<div class="srv-tip">估价由大模型根据市场行情经验给出，仅供参考；实际成交价以车况检测和线下议价为准。</div>';
-    var ov = sheet('srvUsed', 'AI旧车估价', inner);
+    var ov = sheet('srvUsed', 'AI卖车助手', inner);
     ov.querySelector('#usedGo').onclick = function () {
-      var m = (ov.querySelector('#usedModel').value || '').trim();
-      var y = (ov.querySelector('#usedYear').value || '').trim();
-      var km = (ov.querySelector('#usedKm').value || '').trim();
-      if (!m || !y || !km) { toastMsg('车型、年份、里程都要填'); return; }
-      var cb = ov.querySelector('#usedCond button.on');
-      var cond = cb ? cb.getAttribute('data-v') : conds[1];
-      var city = (ov.querySelector('#usedCity').value || '').trim();
+      function val(id) { return (ov.querySelector('#' + id).value || '').trim(); }
+      var brand = val('usedBrand'), model = val('usedModel');
+      var km = val('usedKm');
+      if (!brand && !model) { toastMsg('先填一下品牌和车型'); return; }
+      if (!km || Number(km) <= 0) { toastMsg('填一下已行驶里程'); return; }
+      var full = (brand + ' ' + model).trim();
+      var vYear = val('usedVYear'), regY = val('usedRegY'), regM = val('usedRegM');
+      var kmW = (Number(km) / 10000).toFixed(1);
+      var cond = (function () { var b = ov.querySelector('#usedCond button.on'); return b ? b.getAttribute('data-v') : conds[1]; })();
+      var prov = val('usedProv'), city = val('usedCity');
+      var color = val('usedColor'), energy = val('usedEnergy'), trim = val('usedTrim');
+      var buyP = val('usedBuyP'), buyY = val('usedBuyY');
       var out = ov.querySelector('#usedOut'); out.style.display = '';
       aiRun(out, [
-        { role: 'system', content: '你是二手车评估师，熟悉中国二手车市场行情。输出：1)估值区间（万元）2)影响价格的关键因素 3)卖车渠道建议（车商/平台/个人过户）4)一句风险提示。250字内。没有把握就给区间，不编精确数字。' },
-        { role: 'user', content: '车型：' + m + '；上牌：' + y + '年；里程：' + km + '万公里；车况：' + cond + (city ? '；城市：' + city : '') + '。请估价。' }
+        { role: 'system', content: '你是资深二手车评估师，熟悉中国二手车市场行情与区域差异。输出：1)估值区间（万元），分「车商收购价」和「零售成交价」两个口径 2)影响这辆车价格的关键因素（3条内） 3)最快的卖车渠道建议（车商/平台寄售/个人过户选一） 4)一句风险提示。300字内。没把握就给区间，不编精确数字。' },
+        { role: 'user', content: '车辆：' + full + '，年款' + vYear + '；上牌：' + regY + '年' + regM.replace('月', '') + '月；已行驶约 ' + kmW + ' 万公里；所在：' + prov + (city ? ' ' + city : '')
+          + '；颜色：' + color + '；能源：' + energy + (trim ? '；版本：' + trim : '')
+          + '；车况：' + cond
+          + (buyP ? '；当年新车价约 ' + buyP + ' 万元' : '')
+          + (buyY && buyY !== '不确定' ? '，购车 ' + buyY + ' 年' : '')
+          + '。请估价。' }
       ], this);
     };
   }
