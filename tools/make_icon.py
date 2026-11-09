@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """生成液态玻璃风格 App 图标（1024x1024）：SVG -> headless Chrome 光栅化
 
-v3「黑曜石 · 银辉 · 琥珀」：
-  - 底色改深邃黑曜石蓝，极光光斑更克制，叠加细噪点防色带
-  - 玻璃盾重做成利落的现代徽章形，香槟金 rim 受光 + 镜面高光带
-  - 删掉金色油滴，改为极简银白车侧影 + 盾底一道琥珀金光弧
+v4「盾 · 光」极简徽章：
+  - 不放整车剪影。盾内只留三笔：引擎盖拱线 + 一对大灯线 + 一枚车标点
+  - 底色改为哑光黑曜石（近黑径向渐变），光斑极克制，全靠留白与材质对比
+  - 盾徽重做为经典徽章比例：顶部圆肩、两侧利落内收、底部圆弧尖
+  - 配色只用三色：黑曜石 / 银白 / 香槟金
 """
 import base64
 import io
@@ -29,107 +30,81 @@ SIZES = {
 
 
 def shield_path():
-    # 现代徽章形：顶部平缓圆肩，两肩利落，底部收成圆弧尖
-    return ("M 512 176 C 622 176 704 197 750 238 C 788 272 802 318 802 380 "
-            "L 802 540 C 802 650 694 736 512 792 C 330 736 222 650 222 540 "
-            "L 222 380 C 222 318 236 272 274 238 C 320 197 402 176 512 176 Z")
+    # 经典徽章：顶部平缓圆肩，两侧利落内收，底部短圆弧尖（比例更宽扁稳重）
+    return ("M 512 176 C 602 176 670 192 708 224 C 736 248 750 284 750 330 "
+            "L 750 498 C 750 606 650 692 512 750 C 374 692 274 606 274 498 "
+            "L 274 330 C 274 284 288 248 316 224 C 354 192 422 176 512 176 Z")
 
 
-# 车身侧影（右向朝前的溜背轿跑），局部坐标 0..436 x 0..170（轮拱底 y=140）
-CAR = """
-M 26 140
-L 26 118
-C 26 106 33 100 47 98
-L 76 95
-C 102 92 122 88 142 82
-C 174 48 212 34 254 34
-C 286 36 310 44 332 62
-C 350 76 374 88 398 94
-C 424 98 434 106 436 118
-L 436 140
-L 380 140
-A 34 34 0 0 0 312 140
-L 152 140
-A 34 34 0 0 0 84 140
-Z
-"""
+# 符号「前路 · 灯」：细长透视道路 + 车道线 + 顶部灯点（寓意照亮前路）
+ROAD = "M 503 384 L 521 384 L 600 646 L 424 646 Z"
+LANE1 = "M 488 460 L 536 460"
+LANE2 = "M 478 520 L 546 520"
 
 
 def build_svg():
     sh = shield_path()
-    car = " ".join(CAR.split())
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <defs>
-  <linearGradient id="bg" x1="0.06" y1="0" x2="0.88" y2="1">
-    <stop offset="0" stop-color="#030A16"/>
-    <stop offset="0.5" stop-color="#081B33"/>
-    <stop offset="1" stop-color="#0F355E"/>
-  </linearGradient>
-  <radialGradient id="glow1" cx="0.08" cy="0.92" r="0.55">
-    <stop offset="0" stop-color="#2BD9C7" stop-opacity="0.38"/>
-    <stop offset="1" stop-color="#2BD9C7" stop-opacity="0"/>
+  <!-- 哑光黑曜石底：近黑，中心略透深蓝 -->
+  <radialGradient id="bg" cx="0.5" cy="0.42" r="0.78">
+    <stop offset="0" stop-color="#0B1521"/>
+    <stop offset="0.55" stop-color="#060C15"/>
+    <stop offset="1" stop-color="#03060B"/>
   </radialGradient>
-  <radialGradient id="glow2" cx="0.95" cy="0.05" r="0.5">
-    <stop offset="0" stop-color="#7B5CFF" stop-opacity="0.30"/>
-    <stop offset="1" stop-color="#7B5CFF" stop-opacity="0"/>
+  <radialGradient id="ambientCool" cx="0.18" cy="0.12" r="0.5">
+    <stop offset="0" stop-color="#7E9CC8" stop-opacity="0.14"/>
+    <stop offset="1" stop-color="#7E9CC8" stop-opacity="0"/>
   </radialGradient>
-  <radialGradient id="glow3" cx="0.88" cy="0.95" r="0.4">
-    <stop offset="0" stop-color="#E8A23C" stop-opacity="0.20"/>
-    <stop offset="1" stop-color="#E8A23C" stop-opacity="0"/>
+  <radialGradient id="ambientWarm" cx="0.86" cy="0.9" r="0.46">
+    <stop offset="0" stop-color="#C08A3E" stop-opacity="0.10"/>
+    <stop offset="1" stop-color="#C08A3E" stop-opacity="0"/>
   </radialGradient>
-  <linearGradient id="glass" x1="0.16" y1="0" x2="0.74" y2="1">
-    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.40"/>
-    <stop offset="0.42" stop-color="#D8E9FF" stop-opacity="0.16"/>
-    <stop offset="1" stop-color="#A6C6F2" stop-opacity="0.07"/>
+
+  <!-- 玻璃：烟熏暗玻璃，顶部一层柔光 -->
+  <linearGradient id="glass" x1="0.2" y1="0" x2="0.72" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/>
+    <stop offset="0.4" stop-color="#BFD4EC" stop-opacity="0.06"/>
+    <stop offset="1" stop-color="#7E9BBF" stop-opacity="0.035"/>
   </linearGradient>
-  <linearGradient id="rim" x1="0.12" y1="0" x2="0.5" y2="1">
-    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
-    <stop offset="0.45" stop-color="#DDEBFA" stop-opacity="0.34"/>
-    <stop offset="1" stop-color="#F2E4C4" stop-opacity="0.85"/>
-  </linearGradient>
-  <linearGradient id="rimGold" x1="0.7" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#FFE9B0" stop-opacity="0.9"/>
-    <stop offset="0.55" stop-color="#EFB45C" stop-opacity="0.5"/>
-    <stop offset="1" stop-color="#C98A2E" stop-opacity="0.85"/>
-  </linearGradient>
-  <linearGradient id="streak" x1="0" y1="0" x2="1" y2="0.3">
-    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
-    <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.5"/>
-    <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.16"/>
-    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-  </linearGradient>
-  <linearGradient id="silver" x1="0.2" y1="0" x2="0.62" y2="1">
-    <stop offset="0" stop-color="#FFFFFF"/>
-    <stop offset="0.5" stop-color="#EEF5FD"/>
-    <stop offset="1" stop-color="#BDD2EA"/>
-  </linearGradient>
-  <linearGradient id="goldArc" x1="0" y1="0" x2="1" y2="0">
-    <stop offset="0" stop-color="#C98A2E" stop-opacity="0.25"/>
-    <stop offset="0.28" stop-color="#FFD98A"/>
-    <stop offset="0.55" stop-color="#F0A32C"/>
-    <stop offset="0.85" stop-color="#FFD98A"/>
-    <stop offset="1" stop-color="#C98A2E" stop-opacity="0.25"/>
+  <linearGradient id="rim" x1="0.1" y1="0" x2="0.55" y2="1">
+    <stop offset="0" stop-color="#FFF3D8" stop-opacity="0.96"/>
+    <stop offset="0.34" stop-color="#E4C48C" stop-opacity="0.62"/>
+    <stop offset="0.62" stop-color="#9C7B45" stop-opacity="0.42"/>
+    <stop offset="1" stop-color="#F0D6A6" stop-opacity="0.8"/>
   </linearGradient>
 
-  <filter id="blur46" x="-45%" y="-45%" width="190%" height="190%">
-    <feGaussianBlur stdDeviation="46"/>
+  <!-- 车头线条：银白 -> 香槟金 -->
+  <linearGradient id="stroke" x1="0.14" y1="0" x2="0.86" y2="1">
+    <stop offset="0" stop-color="#FFFFFF"/>
+    <stop offset="0.42" stop-color="#EAF2FB"/>
+    <stop offset="0.72" stop-color="#F3DFB6"/>
+    <stop offset="1" stop-color="#C79A55"/>
+  </linearGradient>
+  <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0.34">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+    <stop offset="0.34" stop-color="#FFFFFF" stop-opacity="0.30"/>
+    <stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0.07"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+  </linearGradient>
+
+  <filter id="blur50" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="50"/>
   </filter>
-  <filter id="blur20" x="-40%" y="-40%" width="180%" height="180%">
-    <feGaussianBlur stdDeviation="20"/>
+  <filter id="blur16" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="16"/>
   </filter>
-  <filter id="blur12" x="-40%" y="-40%" width="180%" height="180%">
-    <feGaussianBlur stdDeviation="12"/>
-  </filter>
-  <filter id="blur7" x="-40%" y="-40%" width="180%" height="180%">
-    <feGaussianBlur stdDeviation="7"/>
+  <filter id="blur6" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="6"/>
   </filter>
   <filter id="grain" x="0" y="0" width="100%" height="100%">
-    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" result="n"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/>
     <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
     <feComposite operator="in" in2="SourceGraphic"/>
   </filter>
-  <filter id="carShadow" x="-25%" y="-25%" width="150%" height="160%">
-    <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#02101F" flood-opacity="0.42"/>
+  <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="5" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
   </filter>
 
   <clipPath id="clipShield"><path d="{sh}"/></clipPath>
@@ -138,46 +113,44 @@ def build_svg():
 
 <!-- 背景 -->
 <rect width="1024" height="1024" fill="url(#bg)"/>
-<rect width="1024" height="1024" fill="url(#glow1)"/>
-<rect width="1024" height="1024" fill="url(#glow2)"/>
-<rect width="1024" height="1024" fill="url(#glow3)"/>
-<rect width="1024" height="1024" fill="#8FA9C9" opacity="0.045" mask="url(#grainMask)"/>
+<rect width="1024" height="1024" fill="url(#ambientCool)"/>
+<rect width="1024" height="1024" fill="url(#ambientWarm)"/>
+<rect width="1024" height="1024" fill="#9DB2CC" opacity="0.035" mask="url(#grainMask)"/>
 
-<!-- 玻璃盾牌 -->
-<ellipse cx="512" cy="848" rx="242" ry="86" fill="#010913" opacity="0.45" filter="url(#blur46)"/>
+<!-- 盾徽投影 -->
+<ellipse cx="512" cy="802" rx="222" ry="66" fill="#01050B" opacity="0.6" filter="url(#blur50)"/>
+
+<!-- 玻璃盾体 -->
 <path d="{sh}" fill="url(#glass)"/>
 <g clip-path="url(#clipShield)">
-  <ellipse cx="398" cy="302" rx="300" ry="192" fill="#9FD9FF" opacity="0.36" filter="url(#blur46)"/>
-  <ellipse cx="705" cy="655" rx="205" ry="195" fill="#3FE0CB" opacity="0.14" filter="url(#blur46)"/>
-  <ellipse cx="512" cy="830" rx="270" ry="120" fill="#04101F" opacity="0.34" filter="url(#blur46)"/>
-  <g transform="rotate(-20 512 430)">
-    <rect x="-160" y="196" width="1400" height="104" fill="url(#streak)" filter="url(#blur7)"/>
-    <rect x="-160" y="336" width="1400" height="14" fill="#FFFFFF" opacity="0.13" filter="url(#blur7)"/>
+  <ellipse cx="424" cy="282" rx="278" ry="160" fill="#A9CCF2" opacity="0.20" filter="url(#blur50)"/>
+  <ellipse cx="512" cy="790" rx="246" ry="100" fill="#02070E" opacity="0.5" filter="url(#blur50)"/>
+  <ellipse cx="672" cy="648" rx="172" ry="142" fill="#C08A3E" opacity="0.10" filter="url(#blur50)"/>
+  <g transform="rotate(-19 512 430)">
+    <rect x="-200" y="216" width="1440" height="82" fill="url(#sheen)" filter="url(#blur6)"/>
   </g>
-  <path d="{sh}" fill="none" stroke="#06213D" stroke-opacity="0.30" stroke-width="26" filter="url(#blur12)"/>
-</g>
-<path d="{sh}" fill="none" stroke="url(#rim)" stroke-width="5"/>
-<path d="{sh}" fill="none" stroke="url(#rimGold)" stroke-width="3" opacity="0.85"/>
-<path d="{sh}" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="1.4"
-      transform="translate(4 3) scale(0.992)" transform-origin="512 484"/>
-
-<!-- 车身（极简侧影，金属银白） -->
-<ellipse cx="512" cy="598" rx="240" ry="22" fill="#04101F" opacity="0.42" filter="url(#blur12)"/>
-<g transform="translate(263 403) scale(1.08)">
-  <path d="{car}" fill="url(#silver)" filter="url(#carShadow)"/>
-  <circle cx="118" cy="140" r="30" fill="#0B1A2C"/>
-  <circle cx="346" cy="140" r="30" fill="#0B1A2C"/>
-  <circle cx="118" cy="140" r="11" fill="#DCE9F8" opacity="0.9"/>
-  <circle cx="346" cy="140" r="11" fill="#DCE9F8" opacity="0.9"/>
-  <path d="M 96 104 C 200 96 330 92 420 100" fill="none" stroke="#FFFFFF"
-        stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
 </g>
 
-<!-- 琥珀金光弧（托底） -->
-<path d="M 302 660 Q 512 588 722 660" fill="none" stroke="url(#goldArc)" stroke-width="22"
-      stroke-linecap="round" opacity="0.28" filter="url(#blur12)"/>
-<path d="M 302 660 Q 512 588 722 660" fill="none" stroke="url(#goldArc)" stroke-width="9"
-      stroke-linecap="round"/>
+<!-- 盾边：香槟金细描边 + 顶部受光 -->
+<path d="{sh}" fill="none" stroke="url(#rim)" stroke-width="4.5"/>
+<path d="M 356 220 C 406 194 464 186 512 186" fill="none"
+      stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="3" stroke-linecap="round"/>
+<path d="M 278 470 C 278 292 312 244 388 212" fill="none"
+      stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="1.6"/>
+
+<!-- 符号「前路 · 灯」：道路指向顶部灯点 -->
+<linearGradient id="road" x1="0.5" y1="0" x2="0.5" y2="1">
+  <stop offset="0" stop-color="#F6E3BC" stop-opacity="0.92"/>
+  <stop offset="0.3" stop-color="#E7EEF8" stop-opacity="0.38"/>
+  <stop offset="1" stop-color="#BDD2EA" stop-opacity="0.10"/>
+</linearGradient>
+<g filter="url(#softGlow)">
+  <path d="{ROAD}" fill="url(#road)"/>
+</g>
+<path d="{LANE1}" stroke="#FFFFFF" stroke-opacity="0.40" stroke-width="4" stroke-linecap="round"/>
+<path d="{LANE2}" stroke="#FFFFFF" stroke-opacity="0.22" stroke-width="3.6" stroke-linecap="round"/>
+<circle cx="512" cy="364" r="11" fill="#F6E3BC" opacity="0.97"/>
+<circle cx="512" cy="364" r="25" fill="#F0C97E" opacity="0.24" filter="url(#blur6)"/>
 </svg>"""
 
 
