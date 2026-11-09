@@ -94,6 +94,7 @@
       + '.srv-seg button{padding:8px 14px;border-radius:999px;border:1px solid #c9d6e8;background:#fff;font-size:13.5px;'
       + 'font-weight:700;color:#41536b}'
       + '.srv-seg button.on{background:linear-gradient(135deg,#0a84ff,#3aa0ff);border-color:transparent;color:#fff}'
+      + '.srv-hint{font-size:11.5px;color:#7c8ba1;line-height:1.55;margin-top:6px;padding-left:2px}'
       + '.srv-btn{width:100%;padding:12px;border-radius:14px;border:0;font-size:15.5px;font-weight:800;color:#fff;'
       + 'background:linear-gradient(135deg,#0a84ff,#2f9bff);margin-top:14px;box-shadow:0 8px 18px -8px rgba(10,110,230,.55)}'
       + '.srv-btn:disabled{opacity:.55}'
@@ -396,6 +397,7 @@
     var energies = ['不限', '燃油', '纯电', '插电混动', '油电混动'];
     var types = ['不限', '轿车', 'SUV', 'MPV', '两厢小车', '皮卡/越野'];
     var seats = ['不限', '5座', '6座', '7座及以上'];
+    var layouts = ['不限', '2+3', '2+2+2', '2+2+3', '2+3+2'];
     var uses = ['日常通勤', '家用带娃', '长途自驾', '商务接待', '跑网约车', '越野撒野'];
     function seg(id, arr, def) {
       return '<div class="srv-frow"><label>' + id.label + '</label><div class="srv-seg" data-seg="' + id.key + '">'
@@ -406,12 +408,44 @@
       + seg({ label: '能源类型', key: 'energy' }, energies, '不限')
       + seg({ label: '车型', key: 'body' }, types, '不限')
       + seg({ label: '座位数', key: 'seats' }, seats, '不限')
+      + seg({ label: '座位布局', key: 'layout' }, layouts, '不限')
+      + '<div class="srv-hint">2+2+3：中排两张独立座椅，MPV 常见，进出第三排方便；2+3+2：中排联排三座，7 座 SUV 常见，平时可当 5 座用。</div>'
       + seg({ label: '主要用途', key: 'use' }, uses, '日常通勤')
       + '<div class="srv-frow"><label>其它要求（选填）</label><textarea id="pickMore" placeholder="比如：百公里油耗低于6L、后排要大、保值率高、北方冬天用…"></textarea></div>'
       + '<button class="srv-btn" id="pickGo">让 AI 帮我选车</button>'
       + '<div class="srv-out" id="pickOut" style="display:none"></div>'
       + '<div class="srv-tip">推荐结果由大模型生成，价格和配置以经销商为准。</div>';
     var ov = sheet('srvPick', 'AI选车', inner);
+    /* 座位数 ↔ 座位布局 联动：点布局自动带出座位数，改座位数时不兼容的布局自动回到「不限」 */
+    var SEAT_OF = { '2+3': '5座', '2+2+2': '6座', '2+2+3': '7座及以上', '2+3+2': '7座及以上' };
+    var LAYOUTS_OF = {
+      '不限': ['2+3', '2+2+2', '2+2+3', '2+3+2'],
+      '5座': ['2+3'], '6座': ['2+2+2'], '7座及以上': ['2+2+3', '2+3+2']
+    };
+    function segEl(key) { return ov.querySelector('.srv-seg[data-seg="' + key + '"]'); }
+    function setSeg(key, val) {
+      var el = segEl(key); if (!el) return;
+      el.querySelectorAll('button').forEach(function (x) {
+        x.classList.toggle('on', x.getAttribute('data-v') === val);
+      });
+    }
+    function getSeg(key) {
+      var el = segEl(key), b = el && el.querySelector('button.on');
+      return b ? b.getAttribute('data-v') : '不限';
+    }
+    ov.addEventListener('click', function (e) {
+      var b = e.target.closest('.srv-seg button');
+      if (!b || !ov.contains(b)) return;
+      var el = b.closest('.srv-seg'), key = el && el.getAttribute('data-seg');
+      if (!key) return;
+      var val = b.getAttribute('data-v');
+      if (key === 'layout') {
+        if (SEAT_OF[val]) setSeg('seats', SEAT_OF[val]);
+      } else if (key === 'seats') {
+        var cur = getSeg('layout');
+        if (cur !== '不限' && (LAYOUTS_OF[val] || []).indexOf(cur) < 0) setSeg('layout', '不限');
+      }
+    });
     ov.querySelector('#pickGo').onclick = function () {
       function segV(key) {
         var b = ov.querySelector('[data-seg="' + key + '"] button.on');
@@ -420,10 +454,13 @@
       var budget = (ov.querySelector('#pickBudget').value || '').trim();
       if (!budget) { toastMsg('先填一下预算'); return; }
       var more = (ov.querySelector('#pickMore').value || '').trim();
+      var lay = segV('layout');
       var out = ov.querySelector('#pickOut'); out.style.display = '';
       aiRun(out, [
-        { role: 'system', content: '你是懂车的选车顾问，熟悉中国市场在售车型。推荐 3 款最匹配的车（含指导价区间），每款给 2 行推荐理由和 1 个注意点，最后给 1 条比价建议。总长 350 字内。不收厂家广告，客观中立。' },
-        { role: 'user', content: '预算' + budget + '万元；能源：' + segV('energy') + '；车型：' + segV('body') + '；座位：' + segV('seats') + '；用途：' + segV('use') + (more ? '；其它要求：' + more : '') + '。请推荐。' }
+        { role: 'system', content: '你是懂车的选车顾问，熟悉中国市场在售车型。推荐 3 款最匹配的车（含指导价区间），每款给 2 行推荐理由和 1 个注意点，最后给 1 条比价建议。若用户指定了座位布局，要按该布局的实际形态推荐（2+2+3 为中排独立座椅、第三排进出通道，多为 MPV；2+3+2 为中排联排三座、可放倒当 5 座用，多为 7 座 SUV），并说明第三排的实际可用程度。总长 350 字内。不收厂家广告，客观中立。' },
+        { role: 'user', content: '预算' + budget + '万元；能源：' + segV('energy') + '；车型：' + segV('body')
+          + '；座位：' + segV('seats') + (lay !== '不限' ? '（布局 ' + lay + '）' : '') + '；用途：' + segV('use')
+          + (more ? '；其它要求：' + more : '') + '。请推荐。' }
       ], this);
     };
   }
