@@ -131,6 +131,17 @@
       + '.st-r{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}'
       + '.st-d{font-size:12px;color:#0a84ff;font-weight:700}'
       + '.st-p{font-size:11.5px;color:#41536b;font-weight:600}'
+      + '.srv-seg-sm button{padding:5px 11px;font-size:12px}'
+      + '.st-th{flex:0 0 54px;width:54px;height:54px;border-radius:10px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
+      + '.st-th img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}'
+      + '.st-th i{font-style:normal;font-size:12px;font-weight:800;color:#fff}'
+      + '.st-nm{display:flex;align-items:center;gap:6px;min-width:0}'
+      + '.st-bdg{flex:0 0 auto;font-size:10px;font-weight:800;color:#fff;border-radius:5px;padding:1px 6px;line-height:1.5}'
+      + '.st-pr{font-size:12px;color:#d9480f;font-weight:700}'
+      + '.st-pr b{font-size:15px;font-weight:800}'
+      + '.st-gui{font-style:normal;font-size:11px;color:#8a99ad;font-weight:600;margin-left:4px}'
+      + '.st-tag{font-size:11px;font-weight:700;color:#e8590c;background:#fff1e6;border-radius:6px;padding:2px 7px;margin-top:2px}'
+      + '.oil-src{color:#a9b6c8}'
       + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
       + '.oil-keyrow{margin-top:10px}'
       + '.oil-keyrow a{font-size:11.5px;color:#0a84ff;text-decoration:none}'
@@ -432,10 +443,20 @@
     if (c === '10044' || /INSUFFICIENT_PRIVILEGES/i.test(s)) return '高德 Key 未开通「周边搜索」权限';
     return s ? '高德接口返回：' + s : '高德接口不可用';
   }
+  function brandOf(name) {
+    var s = String(name || '');
+    if (/加气站|CNG|LNG/i.test(s) && !/加油/.test(s)) return { k: 'gas', t: '加气', c: '#5f7189' };
+    if (/中油\s*bp|bp油站|(^|[^a-z])bp([^a-z]|$)/i.test(s)) return { k: 'bp', t: 'BP', c: '#00843d' };
+    if (/中国石化|中石化|石化/.test(s)) return { k: 'sinopec', t: '石化', c: '#ef6c00' };
+    if (/中国石油|中石油|中油/.test(s)) return { k: 'petro', t: '石油', c: '#d81e06' };
+    if (/壳牌|shell/i.test(s)) return { k: 'shell', t: '壳牌', c: '#d9a400' };
+    if (/中海油|海洋石油/.test(s)) return { k: 'cnooc', t: '海油', c: '#0057a7' };
+    return { k: 'other', t: '油站', c: '#2f6fdd' };
+  }
   function amapNearby(lat, lon, key) {
     var u = 'https://restapi.amap.com/v3/place/around?key=' + encodeURIComponent(key)
       + '&location=' + lon + ',' + lat + '&keywords=' + encodeURIComponent('加油站')
-      + '&radius=5000&offset=25&page=1&extensions=base&sortrule=distance';
+      + '&radius=5000&offset=25&page=1&extensions=all&sortrule=distance';
     return httpGet(u, 9000).then(function (t) {
       var j = JSON.parse(t);
       if (!j || String(j.status) !== '1') {
@@ -445,10 +466,12 @@
         var lc = String(q.location || '').split(',');
         var addr = q.address;
         if (addr && typeof addr === 'object') addr = addr.length ? addr.join('') : '';
+        var ph = (q.photos && q.photos[0] && q.photos[0].url) || '';
         return {
           name: q.name || '加油站', addr: addr || '',
           km: Number(q.distance) ? Number(q.distance) / 1000 : haversine(lat, lon, Number(lc[1]), Number(lc[0])),
-          lat: Number(lc[1]), lon: Number(lc[0])
+          lat: Number(lc[1]), lon: Number(lc[0]),
+          brand: brandOf(q.name), photo: ph
         };
       }).filter(function (x) { return x.km <= 5.2 && x.lat && x.lon; });
       if (!list.length) throw new Error('empty');
@@ -477,7 +500,7 @@
         var j = JSON.parse(t), els = (j && j.elements) || [];
         var list = els.map(function (e) {
           var la = e.lat || (e.center && e.center.lat), lo = e.lon || (e.center && e.center.lon), tg = e.tags || {};
-          return { name: tg.name || tg.brand || tg.operator || '加油站', addr: tg['addr:street'] || '', km: haversine(lat, lon, la, lo), lat: la, lon: lo };
+          return { name: tg.name || tg.brand || tg.operator || '加油站', addr: tg['addr:street'] || '', km: haversine(lat, lon, la, lo), lat: la, lon: lo, brand: brandOf(tg.name || tg.brand || tg.operator), photo: '' };
         }).filter(function (x) { return x.lat && x.lon; }).sort(function (a, b) { return a.km - b.km; }).slice(0, 20);
         if (!list.length) throw new Error('empty');
         return list;
@@ -490,6 +513,14 @@
     var inner = '<div class="oil-locbar">'
       + '<span class="oil-loc-t" id="oilLocTxt">正在定位…</span>'
       + '<button class="srv-loc" id="oilLoc">重新定位</button></div>'
+      + '<div id="oilNearCtl" style="display:none">'
+      + '<div class="oil-sec">附近加油站 <i>直线距离 · 5 公里内</i></div>'
+      + '<div class="srv-frow"><div class="srv-seg srv-seg-sm" id="oilFuelSeg">'
+      + [['92','92#'],['95','95#'],['98','98#'],['0','0#柴油']].map(function (f, i) { return '<button data-f="' + f[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + f[1] + '</button>'; }).join('')
+      + '</div></div>'
+      + '<div class="srv-frow"><div class="srv-seg srv-seg-sm" id="oilBrandSeg">'
+      + [['全部','全部品牌'],['petro','石油'],['sinopec','石化'],['bp','BP'],['shell','壳牌'],['cnooc','海油'],['gas','加气'],['other','其他']].map(function (f, i) { return '<button data-b="' + f[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + f[1] + '</button>'; }).join('')
+      + '</div></div></div>'
       + '<div id="oilNear"><div class="srv-loading">正在查找附近加油站…</div></div>'
       + '<div id="oilProv"></div>'
       + '<div class="oil-sec">查其他城市油价</div>'
@@ -511,12 +542,24 @@
     var locBtn = ov.querySelector('#oilLoc');
     var cur = CITIES[0];
     var lastPos = null, last92 = null, last95 = null;
+    var lastOil = {}, lastList = null, lastSrc = '';
+    var fuelSel = '92', brandSel = '全部';
 
     ov.querySelector('#oilCitySeg').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       ov.querySelectorAll('#oilCitySeg button').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on'); cur = b.getAttribute('data-c');
       ov.querySelector('#oilCityIn').value = '';
+    });
+    ov.querySelector('#oilFuelSeg').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      ov.querySelectorAll('#oilFuelSeg button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); fuelSel = b.getAttribute('data-f'); renderList();
+    });
+    ov.querySelector('#oilBrandSeg').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      ov.querySelectorAll('#oilBrandSeg button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); brandSel = b.getAttribute('data-b'); renderList();
     });
 
     function aiFallback(city) {
@@ -532,28 +575,53 @@
           var d = parseOilJSON(t);
           if (!d) throw new Error('bad');
           last92 = d.price_92; last95 = d.price_95;
+          lastOil = { '92': d.price_92, '95': d.price_95, '98': d.price_98, '0': d.price_0 };
           provBox.innerHTML = oilRowsHTML(d, prov);
           if (!quiet) { out.style.display = 'none'; out.innerHTML = ''; }
-          if (lastPos) renderNear(lastPos);
+          if (lastList) renderList(); else if (lastPos) renderNear(lastPos);
         })
         .catch(function () { if (!quiet) aiFallback(prov); });
     }
+    function fuelPrice(sel) {
+      var v = lastOil[sel];
+      return v ? Number(v).toFixed(2) : '';
+    }
     function stationRowsHTML(list, src) {
-      return '<div class="oil-sec">附近加油站 <i>直线距离 · 5 公里内 · ' + esc(src || '地图数据') + '</i></div>'
-        + list.map(function (st) {
-          return '<div class="st-row" data-lat="' + st.lat + '" data-lon="' + st.lon + '" data-n="' + esc(st.name) + '">'
-            + '<div class="st-l"><b>' + esc(st.name) + '</b>'
-            + (st.addr ? '<span class="st-a">' + esc(st.addr) + '</span>' : '') + '</div>'
-            + '<div class="st-r"><span class="st-d">' + fmtKm(st.km) + '</span>'
-            + '<span class="st-p">' + (last92 ? '92号 ' + Number(last92).toFixed(2) : '看挂牌价') + '</span></div></div>';
-        }).join('')
-        + '<div class="oil-note">站点价格为本站的省指导价参考，实际挂牌/优惠点开站点在高德查看。</div>';
+      return list.map(function (st) {
+        var br = st.brand || brandOf(st.name);
+        var price = fuelPrice(fuelSel);
+        var label = fuelSel === '0' ? '0号柴油' : fuelSel + '号汽油';
+        var thumb = '<div class="st-th" style="background:' + br.c + '"><i>' + br.t + '</i>'
+          + (st.photo ? '<img src="' + esc(st.photo) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : '')
+          + '</div>';
+        return '<div class="st-row" data-lat="' + st.lat + '" data-lon="' + st.lon + '" data-n="' + esc(st.name) + '">'
+          + thumb
+          + '<div class="st-l">'
+          + '<span class="st-nm"><b>' + esc(st.name) + '</b><span class="st-bdg" style="background:' + br.c + '">' + br.t + '</span></span>'
+          + (st.addr ? '<span class="st-a">' + esc(st.addr) + '</span>' : '')
+          + '<span class="st-pr">' + (price
+            ? label + ' <b>&yen;' + price + '</b>/L<i class="st-gui">省指导价 · 点站点看券后价</i>'
+            : '<i class="st-gui">点站点看该站实时挂牌与优惠</i>') + '</span>'
+          + '</div>'
+          + '<div class="st-r"><span class="st-d">' + fmtKm(st.km) + '</span>'
+          + '<span class="st-tag">券后优惠 &rsaquo;</span></div></div>';
+      }).join('')
+        + '<div class="oil-note">列表价格为省发改委指导价；每家油站自己的优惠/券后价数据只在高德体系内，点任意站点直接跳到该站的高德页面查看实时价与券活动。</div>'
+        + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
+    }
+    function renderList() {
+      if (!lastList) return;
+      var list = lastList.filter(function (st) { return brandSel === '全部' || (st.brand && st.brand.k === brandSel); });
+      nearBox.innerHTML = (list.length ? stationRowsHTML(list, lastSrc)
+        : '<div class="oil-fallback">没有符合筛选的油站，换个品牌试试。</div>');
+      bindRows();
     }
     function renderNear(pos) {
       lastPos = pos;
       var key = amapKey();
+      var ctl = ov.querySelector('#oilNearCtl');
       var hit = nearCacheGet(pos.lat, pos.lon);
-      if (hit) { nearBox.innerHTML = stationRowsHTML(hit.list, hit.src); bindRows(); return; }
+      if (hit) { lastList = hit.list; lastSrc = hit.src; if (ctl) ctl.style.display = ''; renderList(); return; }
       nearBox.innerHTML = '<div class="srv-loading">正在查找附近加油站…</div>';
       var note = '';
       var task;
@@ -568,10 +636,13 @@
       }
       task.then(function (r) {
         nearCacheSet(pos.lat, pos.lon, r.src, r.list);
-        nearBox.innerHTML = stationRowsHTML(r.list, r.src)
-          + (note ? '<div class="oil-note">' + esc(note) + '，已自动切到备用地图数据。</div>' : '');
-        bindRows();
+        lastList = r.list;
+        lastSrc = r.src + (note ? '（' + note + '）' : '');
+        if (ctl) ctl.style.display = '';
+        renderList();
       }).catch(function () {
+        lastList = null;
+        if (ctl) ctl.style.display = 'none';
         nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
           + '<div class="oil-fallback">当前网络拿不到附近油站列表，点下面按钮在地图里看（含每站实时挂牌价与优惠）。</div>'
           + (note ? '<div class="oil-note">' + esc(note) + '</div>' : '')
