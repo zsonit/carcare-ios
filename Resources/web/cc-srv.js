@@ -429,7 +429,7 @@
     return null;
   }
   function nearCacheSet(lat, lon, src, list, r) {
-    try { localStorage.setItem(nearCk(lat, lon), JSON.stringify({ t: Date.now(), src: src || '', r: r || 5, list: (list || []).slice(0, 40) })); } catch (e) { }
+    try { localStorage.setItem(nearCk(lat, lon), JSON.stringify({ t: Date.now(), src: src || '', r: r || 25, list: (list || []).slice(0, 60) })); } catch (e) { }
   }
   function haversine(a1, o1, a2, o2) {
     var R = 6371, r = Math.PI / 180;
@@ -457,15 +457,33 @@
     if (/中海油|海洋石油/.test(s)) return { k: 'cnooc', t: '海油', c: '#0057a7' };
     return { k: 'other', t: '油站', c: '#2f6fdd' };
   }
+  function amapCross(lat, lon, key) {
+    var offs = [[0.14, 0], [-0.14, 0], [0, 0.15], [0, -0.15]];
+    var p = Promise.resolve([]);
+    offs.forEach(function (o, i) {
+      p = p.then(function (acc) {
+        return new Promise(function (res) { setTimeout(res, i ? 300 : 0); })
+          .then(function () { return amapNearby(lat + o[0], lon + o[1], key, 12000); })
+          .then(function (l) { return acc.concat(l); }, function () { return acc; });
+      });
+    });
+    return p;
+  }
   function amapNearby(lat, lon, key, radius) {
     var R = radius || 5000;
-    function page(p) {
+    function page(p, retry) {
       var u = 'https://restapi.amap.com/v3/place/around?key=' + encodeURIComponent(key)
         + '&location=' + lon + ',' + lat + '&keywords=' + encodeURIComponent('加油站')
         + '&radius=' + R + '&offset=25&page=' + p + '&extensions=all&sortrule=distance';
       return httpGet(u, 9000).then(function (t) {
         var j = JSON.parse(t);
         if (!j || String(j.status) !== '1') {
+          var c = String(j && j.infocode || '');
+          // 频率超限：等 800ms 自动重试一次（多请求并发时常见）
+          if (retry !== 2 && (c === '10021' || c === '10019' || c === 'CUQPS_HAS_EXCEEDED_THE_LIMIT')) {
+            return new Promise(function (res) { setTimeout(res, 800); })
+              .then(function () { return page(p, 2); });
+          }
           var e = new Error(amapErrText(j && j.info, j && j.infocode)); e.amap = true; throw e;
         }
         return (j.pois || []).map(function (q) {
@@ -600,7 +618,7 @@
           lastOil = { '92': d.price_92, '95': d.price_95, '98': d.price_98, '0': d.price_0 };
           provBox.innerHTML = oilRowsHTML(d, prov);
           if (!quiet) { out.style.display = 'none'; out.innerHTML = ''; }
-          if (lastList) renderList(); else if (lastPos) renderNear(lastPos);
+          if (lastList) renderList();
         })
         .catch(function () { if (!quiet) aiFallback(prov); });
     }
@@ -660,11 +678,17 @@
         if (!x || !x.lat || !x.lon) return;
         var k = x.lat.toFixed(4) + ',' + x.lon.toFixed(4);
         if (seen[k]) return;
-        seen[k] = 1; out.push(x);
+        seen[k] = 1;
+        if (lastPos) x.km = haversine(lastPos.lat, lastPos.lon, x.lat, x.lon);
+        out.push(x);
       });
-      return out.sort(function (p, q) { return p.km - q.km; });
+      return out.filter(function (x) { return x.km <= 30; })
+        .sort(function (p, q) { return p.km - q.km; }).slice(0, 60);
     }
+    var nearBusy = false;
     function renderNear(pos) {
+      if (nearBusy) return;
+      nearBusy = true;
       lastPos = pos;
       var key = amapKey();
       var ctl = ov.querySelector('#oilNearCtl');
@@ -676,21 +700,27 @@
       }
       nearBox.innerHTML = '<div class="srv-loading">正在查找附近加油站…</div>';
       var note = '';
-      var RADII = [5, 15, 30];
+      var RADII = [25, 50];
       fetchNear(pos, key, RADII[0]).catch(function (e) {
         if (e && e.amap) note = String(e.message);
-        return osmNearby(pos.lat, pos.lon, 8000).then(function (l) { return { list: l, src: 'OpenStreetMap' }; });
+        return osmNearby(pos.lat, pos.lon, 12000).then(function (l) { return { list: l, src: 'OpenStreetMap' }; });
       }).then(function (r) {
-        // 半径逐级放宽（5 → 15 → 30 公里），直到凑够 8 家；县城/山区也能一屏看到 8~9 家
-        function step(i, cur) {
-          if (cur && cur.list && cur.list.length >= 8) return { R: RADII[i - 1] || RADII[0], r: cur };
-          if (i >= RADII.length) return { R: RADII[i - 1] || RADII[0], r: cur };
-          return fetchNear(pos, key, RADII[i]).then(function (r2) {
-            var merged = mergeList(cur && cur.list, r2.list);
-            return step(i + 1, merged.length ? { list: merged, src: r2.src || (cur && cur.src) || '地图' } : cur);
-          }, function () { return step(i + 1, cur); });
+        // 跨市补查：高德周边搜索只返回定位点所在市的油站，把查询点向四方平移 15km 落到邻市再查，合并去重
+        var crossP = key ? amapCross(pos.lat, pos.lon, key) : Promise.resolve([]);
+        return Promise.all([Promise.resolve(r), crossP]).then(function (arr) {
+          var merged = mergeList(arr[0] && arr[0].list, arr[1] || []);
+          if (merged.length) return { R: RADII[0], r: { list: merged, src: (arr[0] && arr[0].src) || '地图' } };
+          return { R: RADII[0], r: r };
+        });
+      }).then(function (res) {
+        // 仍不足 8 家（荒野）：扩到 50 公里
+        if (!(res.r && res.r.list && res.r.list.length >= 8)) {
+          return fetchNear(pos, key, RADII[1]).then(function (r2) {
+            var merged = mergeList(res.r && res.r.list, r2.list);
+            return { R: RADII[1], r: { list: merged.length ? merged : res.r.list, src: (res.r && res.r.src) || r2.src } };
+          }, function () { return res; });
         }
-        return step(1, r);
+        return res;
       }).then(function (res) {
         var r = res.r;
         if (!r || !r.list || !r.list.length) throw new Error('empty');
@@ -698,8 +728,10 @@
         lastSrc = r.src + (note ? '（' + note + '）' : '');
         nearCacheSet(pos.lat, pos.lon, r.src, r.list, res.R);
         if (ctl) ctl.style.display = '';
+        nearBusy = false;
         nearTip(); renderList();
       }).catch(function () {
+        nearBusy = false;
         lastList = null;
         if (ctl) ctl.style.display = 'none';
         nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
