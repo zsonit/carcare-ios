@@ -149,6 +149,28 @@
       + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
       + '.oil-keyrow{margin-top:10px}'
       + '.oil-keyrow a{font-size:11.5px;color:#0a84ff;text-decoration:none}'
+      /* ---- AI查故障 ---- */
+      + '.dg-prog{height:5px;border-radius:99px;background:#e4ebf4;overflow:hidden;margin:4px 0 12px}'
+      + '.dg-prog i{display:block;height:100%;background:linear-gradient(90deg,#0a84ff,#2f9bff);border-radius:99px;transition:width .3s}'
+      + '.dg-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}'
+      + '.dg-row{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:#fff;border:1.5px solid #dbe5f2;cursor:pointer}'
+      + '.dg-row.on{border-color:#0a84ff;background:#f0f7ff}'
+      + '.dg-e{font-size:20px;flex:none}'
+      + '.dg-row b{flex:1;font-size:15px;color:#1b2a3d}'
+      + '.dg-chk{flex:none;width:24px;height:24px;border-radius:8px;border:1.5px solid #c3d2e6;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;background:#fff}'
+      + '.dg-row.on .dg-chk{background:#0a84ff;border-color:#0a84ff}'
+      + '.dg-cnt{font-size:12px;color:#5a6d86;margin:10px 2px 0}'
+      + '.dg-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}'
+      + '.dg-chip{font-size:12px;font-weight:700;color:#0a6fd8;background:#eaf3ff;border-radius:99px;padding:4px 11px}'
+      + '.dg-ta{width:100%;box-sizing:border-box;min-height:110px;padding:12px;border-radius:14px;border:1px solid #cfdaea;font-size:14px;line-height:1.6;outline:none;resize:vertical;font-family:inherit;color:#1b2a3d;background:#fff}'
+      + '.dg-ta:focus{border-color:#0a84ff}'
+      + '.dg-tacnt{text-align:right;font-size:11px;color:#8a99ad;margin-top:3px}'
+      + '.dg-voice{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:#fff;border:1.5px dashed #0a84ff;cursor:pointer;margin-top:14px}'
+      + '.dg-voice:active{background:#f0f7ff}'
+      + '.dg-voice .mi{flex:none;width:38px;height:38px;border-radius:50%;background:#eaf3ff;display:flex;align-items:center;justify-content:center;font-size:18px}'
+      + '.dg-voice b{font-size:14.5px;color:#1b2a3d;display:block}'
+      + '.dg-voice span{font-size:11.5px;color:#8a99ad}'
+      + '.dg-back{display:block;width:100%;text-align:center;font-size:13.5px;color:#0a6fd8;font-weight:700;margin-top:12px;background:none;border:0;padding:8px}'
       + '#oilKeyBox{display:flex;gap:8px;margin-top:6px}'
       + '#oilKeyBox input{flex:1;min-width:0;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:1px solid #cfdaea;font-size:13px;outline:none}'
       + '.srv-btn{width:100%;padding:12px;border-radius:14px;border:0;font-size:15.5px;font-weight:800;color:#fff;'
@@ -199,7 +221,8 @@
     price: '<svg viewBox="0 0 24 24" stroke="#c8482f"><path d="M4 13.6 10.4 20a2 2 0 0 0 2.9 0l5.5-5.5a2 2 0 0 0 0-2.9L13.2 5.2a2 2 0 0 0-1.5-.6l-4.6.3a2 2 0 0 0-1.9 1.9l-.3 4.6c0 .6.2 1.1.6 1.5z" transform="rotate(-45 12 12)"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M12.5 13.5l3 3M14 12l3 3" transform="rotate(-45 12 12)"/></svg>',
     cam: '<svg viewBox="0 0 24 24" stroke="#3c9e5f"><rect x="3.5" y="6.5" width="17" height="12.5" rx="2.6"/><circle cx="12" cy="12.8" r="3.4"/><path d="M9 6.5l1.2-2h3.6L15 6.5"/><path d="M19.4 4.2v3M20.9 5.7h-3" stroke="#e2892b"/></svg>',
     sos: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M12 3.5 3.5 20h17z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r=".4" fill="#d64541"/></svg>',
-    pen: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M4 20c1-4.5 3-9.5 8.5-13.5C15 4.5 18 4 20 4c0 2-.5 5-2.5 7.5C13.5 17 8.5 19 4 20z"/><path d="M4 20c2.5-3.5 6-6.5 9.5-8.5"/></svg>'
+    pen: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M4 20c1-4.5 3-9.5 8.5-13.5C15 4.5 18 4 20 4c0 2-.5 5-2.5 7.5C13.5 17 8.5 19 4 20z"/><path d="M4 20c2.5-3.5 6-6.5 9.5-8.5"/></svg>',
+    diag: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="none"/></svg>'
   };
 
   var FEATURES = [
@@ -209,9 +232,117 @@
     { id: 'pick', g: 'srv-g4', ic: 'pick', t: 'AI选车', d: 'AI帮您选到心仪的车', fn: openPick, tag: '+100' },
     { id: 'used', g: 'srv-g2', ic: 'price', t: 'AI卖车助手', d: 'AI帮您评估旧车卖价', fn: openUsed },
     { id: 'photo', g: 'srv-g1', ic: 'cam', t: '拍照问AI', d: '拍照问车，秒懂疑难', fn: openPhoto },
+    { id: 'diag', g: 'srv-g2', ic: 'diag', t: 'AI查故障', d: '说说症状，AI帮您判断故障', fn: openDiag },
     { id: 'sos', g: 'srv-g2', ic: 'sos', t: '极速救援', d: '一键拨打，救援极达', fn: openSOS },
     { id: 'writer', g: 'srv-g3', ic: 'pen', t: 'AI写手', d: '一键生成事故报告 | 行车总结', fn: openWriter }
   ];
+
+  /* ------------------------------------------------------------------ *
+   * AI 查故障：选症状 → 文字/语音补充 → AI 诊断
+   * ------------------------------------------------------------------ */
+  function openDiag() {
+    var SYMS = [
+      { e: '🔊', t: '异响或怪声' },
+      { e: '⚠️', t: '故障灯亮起' },
+      { e: '〰️', t: '抖动或震动' },
+      { e: '⚡', t: '动力下降' },
+      { e: '💧', t: '液体泄漏' },
+      { e: '💬', t: '其他问题' }
+    ];
+    var sel = {}, step = 1, carName = '';
+    try { var v = curV(); if (v && S(v.name)) carName = S(v.name) + (S(v.plate) ? ' ' + S(v.plate) : ''); } catch (e) { }
+    function selCount() { return Object.keys(sel).filter(function (k) { return sel[k]; }).length; }
+    var ov = sheet('srvDiag', 'AI查故障', '<div id="dgBody"></div>');
+    var body = ov.querySelector('#dgBody');
+
+    function render() {
+      var pct = step === 1 ? 33 : step === 2 ? 66 : 100;
+      var h = '<div class="dg-prog"><i style="width:' + pct + '%"></i></div>';
+      if (step === 1) {
+        h += '<div class="oil-sec">选择你目前遇到的症状</div>'
+          + '<div class="dg-list">' + SYMS.map(function (s, i) {
+            return '<div class="dg-row' + (sel[i] ? ' on' : '') + '" data-i="' + i + '"><span class="dg-e">' + s.e + '</span><b>' + s.t + '</b><span class="dg-chk">' + (sel[i] ? '✓' : '') + '</span></div>';
+          }).join('') + '</div>'
+          + '<div class="dg-cnt">' + (selCount() ? '✅ 已选择 ' + selCount() + ' 项' : '至少选择一项症状') + '</div>'
+          + '<button class="srv-btn" id="dgNext"' + (selCount() ? '' : ' disabled') + '>继续</button>';
+      } else if (step === 2) {
+        var chips = SYMS.filter(function (s, i) { return sel[i]; }).map(function (s) { return '<span class="dg-chip">' + s.e + ' ' + s.t + '</span>'; }).join('');
+        h += '<div class="oil-sec">补充细节</div>'
+          + '<div class="dg-cnt" style="margin-top:2px">我的症状 · 已选择</div>'
+          + '<div class="dg-chips">' + chips + '</div>'
+          + '<div class="oil-sec">用文字描述一下</div>'
+          + '<textarea class="dg-ta" id="dgTa" maxlength="300" placeholder="例如：什么时候开始、什么速度下更明显、是否伴随气味或抖动"></textarea>'
+          + '<div class="dg-tacnt"><span id="dgCnt">0</span>/300</div>'
+          + '<div class="dg-voice" id="dgVoice"><span class="mi">🎙️</span><span style="flex:1"><b>点击说话</b><span>描述正在发生什么</span></span></div>'
+          + '<button class="srv-btn" id="dgGo">开始 AI 诊断</button>'
+          + '<button class="dg-back" id="dgBack">‹ 上一步，改症状</button>';
+      } else {
+        h += '<div class="oil-sec">AI 诊断结果</div>'
+          + '<div class="srv-out" id="dgOut" style="margin-top:8px"><div class="srv-loading">AI 正在分析车辆症状…</div></div>'
+          + '<button class="srv-btn" id="dgAgain">重新诊断</button>'
+          + '<button class="dg-back" id="dgBack2">‹ 返回修改症状</button>';
+      }
+      body.innerHTML = h;
+      bind();
+    }
+
+    function bind() {
+      if (step === 1) {
+        body.querySelectorAll('.dg-row').forEach(function (r) {
+          r.onclick = function () { var i = r.getAttribute('data-i'); sel[i] = !sel[i]; render(); };
+        });
+        body.querySelector('#dgNext').onclick = function () { step = 2; render(); };
+      } else if (step === 2) {
+        var ta = body.querySelector('#dgTa'), cnt = body.querySelector('#dgCnt');
+        ta.oninput = function () { cnt.textContent = String(ta.value.length); };
+        body.querySelector('#dgVoice').onclick = function () { diagVoice(ta, cnt); };
+        body.querySelector('#dgBack').onclick = function () { step = 1; render(); };
+        body.querySelector('#dgGo').onclick = function () { step = 3; render(); runAI(ta.value); };
+      } else {
+        body.querySelector('#dgBack2').onclick = function () { step = 2; render(); };
+        body.querySelector('#dgAgain').onclick = function () { step = 2; render(); };
+      }
+    }
+
+    function diagVoice(ta, cnt) {
+      var put = function (t) {
+        if (!document.body.contains(ta)) return;
+        if (!t) { toastMsg('没听清，再试一次'); return; }
+        ta.value = (ta.value ? ta.value + ' ' : t).slice(0, 300);
+        cnt.textContent = String(ta.value.length);
+      };
+      if (window.__ccNative) {
+        window.__ccVoiceHook = put;
+        try { window.__ccNative({ type: 'voice' }); toastMsg('请说出症状，如「怠速时发动机有哒哒声」'); }
+        catch (e) { toastMsg('语音不可用'); }
+        return;
+      }
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { toastMsg('当前环境不支持语音输入，请用文字描述'); return; }
+      try {
+        var r = new SR(); r.lang = 'zh-CN'; r.interimResults = false;
+        r.onresult = function (ev) { put(ev.results[0][0].transcript); };
+        r.onerror = function () { toastMsg('语音识别失败，请用文字描述'); };
+        r.start();
+        toastMsg('正在听，请说出症状…');
+      } catch (e) { toastMsg('语音识别启动失败'); }
+    }
+
+    function runAI(detail) {
+      var out = body.querySelector('#dgOut');
+      var chosen = SYMS.filter(function (s, i) { return sel[i]; }).map(function (s) { return s.t; }).join('、');
+      var sys = '你是资深汽车维修诊断专家。'
+        + (carName ? '车辆：' + carName + '。' : '')
+        + '根据用户给出的症状与补充描述，输出：1) 可能原因，按可能性从高到低排序，每条标注严重程度（🔴 需立即停驶检查 / 🟡 尽快检修 / 🟢 可继续观察）；2) 建议自查步骤（安全第一）；3) 维修方向与大致费用区间（人民币）。用简洁的 markdown 小标题+列表，总长不超过 400 字。不编造用户未提供的细节；信息不足时先给出最可能的假设并注明。最后加一行提醒：以上为 AI 参考判断，不能替代实车检测。';
+      var q = '症状：' + chosen + (String(detail || '').trim() ? '。补充描述：' + String(detail).trim() : '');
+      aiRun(out, [
+        { role: 'system', content: sys },
+        { role: 'user', content: q }
+      ]);
+    }
+
+    render();
+  }
 
   function render() {
     var host = document.getElementById('screen-srv');

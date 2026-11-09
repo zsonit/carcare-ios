@@ -1178,6 +1178,7 @@ function voiceFill(kind) {
   catch (e) { toast('语音不可用'); }
 }
 function ccVoiceResult(text) {
+  if (window.__ccVoiceHook) { const hk = window.__ccVoiceHook; window.__ccVoiceHook = null; hk(String(text || '').trim()); return; }
   const s = String(text || '').trim();
   if (!s) { toast('没听清，再试一次'); return; }
   const nums = (s.match(/\d+(\.\d+)?/g) || []).map(Number);
