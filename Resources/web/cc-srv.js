@@ -626,14 +626,14 @@
       var v = lastOil[sel];
       return v ? Number(v).toFixed(2) : '';
     }
-    var DISC = { sinopec: 0.30, petro: 0.40, cnooc: 0.50, bp: 0.40, shell: 0.60, other: 1.20, gas: 0 };
+    var DISC = { sinopec: 0.55, petro: 0.40, cnooc: 0.55, bp: 0.55, shell: 0.75, other: 0.50, gas: 0 };
     function stationRowsHTML(list, src) {
       return list.map(function (st) {
         var br = st.brand || brandOf(st.name);
         var price = fuelPrice(fuelSel);
         var fl = fuelSel === '0' ? '0号' : fuelSel + '号';
         var after = '';
-        if (price && DISC[br.k]) after = '<span class="st-after">券后约 &yen;' + (Number(price) - DISC[br.k]).toFixed(2) + '</span>';
+        if (price && DISC[br.k]) after = '<span class="st-after">优惠后约 &yen;' + (Number(price) - DISC[br.k]).toFixed(2) + '</span>';
         var thumb = '<div class="st-th" style="background:' + br.c + '"><i>' + br.t + '</i>'
           + (st.photo ? '<img src="' + esc(st.photo) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : '')
           + '</div>';
@@ -654,7 +654,7 @@
           ? '<div class="oil-fallback">周边油站较少，已按最远 ' + lastR + ' 公里查询。点下面按钮在高德地图里看完整列表。</div>'
             + '<button class="srv-btn" id="oilMapMore">在高德地图看更多加油站</button>'
           : '')
-        + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；下方「券后约」按各品牌常见优惠幅度预估（两桶油约降 3~4 毛、壳牌/海油约降 5~6 毛、民营站约降 1 块多），实际以油站当天活动为准，点站点可跳高德查看实时优惠。</div>'
+        + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；「优惠后约」按各品牌在高德的常见优惠幅度估算（两桶油约降 4~5 毛、壳牌约降 7 毛、民营/外资约降 5 毛），每站实际略有差异，点站点可跳高德查看该站实时优惠后价。</div>'
         + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
     }
     function renderList() {
