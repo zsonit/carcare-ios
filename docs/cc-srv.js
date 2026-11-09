@@ -685,14 +685,29 @@
       var prov = val('usedProv'), city = val('usedCity');
       var color = val('usedColor'), energy = val('usedEnergy'), trim = val('usedTrim');
       var buyP = val('usedBuyP'), buyY = val('usedBuyY');
+      /* 折旧基准（收购口径）：本地按保守折旧曲线算一个客观锚点，防止大模型按新车价机械折算导致虚高 */
+      var base = null;
+      var bp = Number(buyP);
+      var byY = parseInt(buyY, 10) || parseInt(regY, 10) || 0;
+      if (bp > 0 && byY > 0) {
+        var ageY = Math.max(0, curY - byY);
+        var RES = { 0: 0.85, 1: 0.78, 2: 0.66, 3: 0.56, 4: 0.48, 5: 0.42, 6: 0.36, 7: 0.31, 8: 0.27, 9: 0.24, 10: 0.24, 11: 0.21, 12: 0.19, 13: 0.17, 14: 0.15, 15: 0.13 };
+        var rf = RES[ageY] || 0.12;
+        var annual = ageY >= 1 ? (Number(kmW) / ageY) : Number(kmW);
+        var kf = annual > 2.2 ? Math.max(0.8, 1 - (annual - 2.2) * 0.03) : (ageY >= 2 && annual < 1 ? 1.05 : 1);
+        var cf = cond.indexOf('优秀') >= 0 ? 1.08 : cond.indexOf('一般') >= 0 ? 0.88 : cond.indexOf('事故') >= 0 ? 0.65 : 1;
+        var ef = (energy === '纯电' && ageY >= 8) ? 0.9 : 1;
+        base = Math.max(0.3, Math.round(bp * rf * kf * cf * ef * 10) / 10);
+      }
       var out = ov.querySelector('#usedOut'); out.style.display = '';
       aiRun(out, [
-        { role: 'system', content: '你是资深二手车评估师，熟悉中国二手车市场行情与区域差异。输出：1)估值区间（万元），分「车商收购价」和「零售成交价」两个口径 2)影响这辆车价格的关键因素（3条内） 3)最快的卖车渠道建议（车商/平台寄售/个人过户选一） 4)一句风险提示。300字内。没把握就给区间，不编精确数字。' },
+        { role: 'system', content: '你是资深二手车评估师，定价必须依据中国二手车市场真实成交行情（同车型在懂车帝/二手车之家/瓜子等平台的实际在售价与成交价），严禁按新车指导价机械折旧推算——这是估价虚高的最常见原因。牢记：1)车商收车要预留整备、利润和风险成本，收购价通常只有市场零售行情的7~8成；2)8年以上车龄的普通家用车，市场成交价通常只有当年新车价的15%~25%，冷门车和高里程车更低；3)车况一般、有过事故或大修的要显著下压；4)老车有代步车市场托底，正常能开的老车一般不低于1万。如果用户消息里给了「折旧基准参考」，把它当锚点：收购价区间一般在基准的0.9~1.5倍内浮动（丰田/本田等高保值车型可上浮），零售价原则上不超过基准的1.8倍；若你确信真实行情与基准差异明显，先说清理由再给区间。没有基准时按真实行情估算，同样宁低勿高。输出：1)估值区间（万元），分「车商收购价」和「零售成交价」两个口径 2)影响这辆车价格的关键因素（3条内） 3)最快的卖车渠道建议（车商/平台寄售/个人过户选一） 4)一句风险提示。300字内。宁可保守（偏低）也不要虚高；没把握就给宽区间，下限取低，不编精确数字。' },
         { role: 'user', content: '车辆：' + full + '，年款' + vYear + '；上牌：' + regY + '年' + regM.replace('月', '') + '月；已行驶约 ' + kmW + ' 万公里；所在：' + prov + (city ? ' ' + city : '')
           + '；颜色：' + color + '；能源：' + energy + (trim ? '；版本：' + trim : '')
           + '；车况：' + cond
           + (buyP ? '；当年新车价约 ' + buyP + ' 万元' : '')
           + (buyY && buyY !== '不确定' ? '，购车 ' + buyY + ' 年' : '')
+          + (base ? '；折旧基准参考（收购口径）约 ' + base + ' 万元' : '')
           + '。请估价。' }
       ], this);
     };
