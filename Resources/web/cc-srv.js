@@ -119,6 +119,23 @@
       + '.oil-upd,.oil-note{font-size:11.5px;color:#7c8ba1;line-height:1.55;margin-top:8px}'
       + '.srv-loading{padding:14px 0;text-align:center;color:#5a6d86;font-size:13.5px}'
       + '.srv-note{padding:6px 0;color:#41536b;font-size:13px;line-height:1.6}'
+      + '.oil-locbar{display:flex;align-items:center;gap:8px;margin-bottom:6px}'
+      + '.oil-loc-t{flex:1;font-size:12.5px;color:#5a6d86;line-height:1.4}'
+      + '.oil-sec{font-size:13.5px;font-weight:800;color:#1b2a3d;margin:12px 0 2px}'
+      + '.oil-sec i{font-style:normal;font-size:11px;color:#8a99ad;font-weight:600;margin-left:6px}'
+      + '.st-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #eef3f9;cursor:pointer;border-radius:10px}'
+      + '.st-row:active{background:#f4f9ff}'
+      + '.st-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}'
+      + '.st-l b{font-size:14px;color:#1b2a3d;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.st-a{font-size:11.5px;color:#8a99ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.st-r{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}'
+      + '.st-d{font-size:12px;color:#0a84ff;font-weight:700}'
+      + '.st-p{font-size:11.5px;color:#41536b;font-weight:600}'
+      + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
+      + '.oil-keyrow{margin-top:10px}'
+      + '.oil-keyrow a{font-size:11.5px;color:#0a84ff;text-decoration:none}'
+      + '#oilKeyBox{display:flex;gap:8px;margin-top:6px}'
+      + '#oilKeyBox input{flex:1;min-width:0;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:1px solid #cfdaea;font-size:13px;outline:none}'
       + '.srv-btn{width:100%;padding:12px;border-radius:14px;border:0;font-size:15.5px;font-weight:800;color:#fff;'
       + 'background:linear-gradient(135deg,#0a84ff,#2f9bff);margin-top:14px;box-shadow:0 8px 18px -8px rgba(10,110,230,.55)}'
       + '.srv-btn:disabled{opacity:.55}'
@@ -376,73 +393,197 @@
       + row('0号柴油', d.price_0, d.change_0)
       + (upd ? '<div class="oil-upd">数据更新：' + upd + '（国家调价窗口生效价）</div>' : '');
   }
+  /* 附近加油站：优先高德 Web 服务（用户自备免费 Key），其次 OSM Overpass（免 Key） */
+  var AMAP_LS = 'cc_amap_key';
+  function amapKey() { try { return (localStorage.getItem(AMAP_LS) || '').trim(); } catch (e) { return ''; } }
+  function saveAmapKey(k) { try { localStorage.setItem(AMAP_LS, k || ''); } catch (e) { } }
+  function haversine(a1, o1, a2, o2) {
+    var R = 6371, r = Math.PI / 180;
+    var da = (a2 - a1) * r, doo = (o2 - o1) * r;
+    var x = Math.sin(da / 2) * Math.sin(da / 2) + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(doo / 2) * Math.sin(doo / 2);
+    return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  }
+  function fmtKm(km) { return km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'; }
+  function amapNearby(lat, lon, key) {
+    var u = 'https://restapi.amap.com/v3/place/around?key=' + encodeURIComponent(key)
+      + '&location=' + lon + ',' + lat + '&keywords=' + encodeURIComponent('加油站')
+      + '&types=010300&radius=5000&offset=20&page=1&extensions=base&sortrule=distance';
+    return httpGet(u, 9000).then(function (t) {
+      var j = JSON.parse(t);
+      if (!j || String(j.status) !== '1') throw new Error(j && j.info ? j.info : 'amap');
+      var list = (j.pois || []).map(function (q) {
+        var lc = String(q.location || '').split(',');
+        return {
+          name: q.name || '加油站', addr: q.address || '',
+          km: Number(q.distance) ? Number(q.distance) / 1000 : haversine(lat, lon, Number(lc[1]), Number(lc[0])),
+          lat: Number(lc[1]), lon: Number(lc[0])
+        };
+      }).filter(function (x) { return x.km <= 5.2; });
+      if (!list.length) throw new Error('empty');
+      return list.sort(function (a, b) { return a.km - b.km; });
+    });
+  }
+  function osmNearby(lat, lon) {
+    var q = '[out:json][timeout:12];(node(around:5000,' + lat + ',' + lon + ')[amenity=fuel];'
+      + 'way(around:5000,' + lat + ',' + lon + ')[amenity=fuel];);out center 40;';
+    var mirrors = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+    function tryAt(i) {
+      if (i >= mirrors.length) return Promise.reject(new Error('no-mirror'));
+      return httpGet(mirrors[i] + '?data=' + encodeURIComponent(q), 7000).then(function (t) {
+        var j = JSON.parse(t), els = (j && j.elements) || [];
+        var list = els.map(function (e) {
+          var la = e.lat || (e.center && e.center.lat), lo = e.lon || (e.center && e.center.lon), tg = e.tags || {};
+          return { name: tg.name || tg.brand || tg.operator || '加油站', addr: tg['addr:street'] || '', km: haversine(lat, lon, la, lo), lat: la, lon: lo };
+        }).filter(function (x) { return x.lat && x.lon; }).sort(function (a, b) { return a.km - b.km; }).slice(0, 20);
+        if (!list.length) throw new Error('empty');
+        return list;
+      }).catch(function () { return tryAt(i + 1); });
+    }
+    return tryAt(0);
+  }
+
   function openOil() {
-    var inner = '<div class="srv-frow"><label>选择城市</label><div class="srv-seg" id="oilCitySeg">'
+    var inner = '<div class="oil-locbar">'
+      + '<span class="oil-loc-t" id="oilLocTxt">正在定位…</span>'
+      + '<button class="srv-loc" id="oilLoc">重新定位</button></div>'
+      + '<div id="oilNear"><div class="srv-loading">正在查找附近加油站…</div></div>'
+      + '<div id="oilProv"></div>'
+      + '<div class="oil-sec">查其他城市油价</div>'
+      + '<div class="srv-frow"><div class="srv-seg" id="oilCitySeg">'
       + CITIES.slice(0, 12).map(function (c, i) { return '<button data-c="' + c + '"' + (i === 0 ? ' class="on"' : '') + '>' + c + '</button>'; }).join('')
       + '</div></div>'
-      + '<div class="srv-frow"><input id="oilCityIn" placeholder="或直接输入城市名，如：珠海"></div>'
-      + '<div class="srv-btnrow"><button class="srv-btn" id="oilGo">查询油价</button><button class="srv-loc" id="oilLoc">📍 定位附近加油站</button></div>'
+      + '<div class="srv-frow"><input id="oilCityIn" placeholder="或输入城市名，如：珠海"></div>'
+      + '<button class="srv-btn" id="oilGo">查询该城市油价</button>'
       + '<div class="srv-out" id="oilOut" style="display:none"></div>'
-      + '<div class="srv-tip">油价来自公开调价数据，为国家发改委最近一次调价后的指导价，各加油站现场挂牌与优惠可能略有不同；附近加油站实时挂牌价可在高德地图中查看。</div>';
+      + '<div class="oil-keyrow"><a href="javascript:;" id="oilKeyToggle">填高德 Key，直接在本页列出附近加油站</a>'
+      + '<div id="oilKeyBox" style="display:none"><input id="oilKeyIn" placeholder="高德 Web 服务 Key（免费申请，仅存本机）">'
+      + '<button class="srv-loc" id="oilKeySave">保存</button></div></div>'
+      + '<div class="srv-tip">省油价为国家发改委最近一次调价后的指导价，实时准确；各加油站挂牌价与优惠以后者为准，点站点可在高德查看该站实时价。</div>';
     var ov = sheet('srvOil', '城市油价', inner);
+    var out = ov.querySelector('#oilOut');
+    var provBox = ov.querySelector('#oilProv');
+    var nearBox = ov.querySelector('#oilNear');
+    var locTxt = ov.querySelector('#oilLocTxt');
+    var locBtn = ov.querySelector('#oilLoc');
     var cur = CITIES[0];
+    var lastPos = null, last92 = null, last95 = null;
+
     ov.querySelector('#oilCitySeg').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       ov.querySelectorAll('#oilCitySeg button').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on'); cur = b.getAttribute('data-c');
       ov.querySelector('#oilCityIn').value = '';
     });
-    var out = ov.querySelector('#oilOut'), btn = ov.querySelector('#oilGo'), loc = ov.querySelector('#oilLoc');
+
     function aiFallback(city) {
       aiRun(out, [
         { role: 'system', content: '你是油价查询助手。基于你的知识回答，明确说明数据可能滞后，不做编造。回答用简洁表格+两行提示。' },
         { role: 'user', content: '给出' + city + '当前 92号、95号、98号汽油和 0号柴油 的参考零售价（元/升），并注明信息时效。' }
-      ], btn);
+      ], ov.querySelector('#oilGo'));
     }
-    function queryProv(prov) {
-      out.style.display = '';
-      out.innerHTML = '<div class="srv-loading">正在获取 ' + esc(prov) + ' 最新油价…</div>';
+    function queryProv(prov, quiet) {
+      if (!quiet) { out.style.display = ''; out.innerHTML = '<div class="srv-loading">正在获取 ' + esc(prov) + ' 最新油价…</div>'; }
       httpGet('https://www.cunyuapi.top/oil_price?province=' + encodeURIComponent(prov), 10000)
         .then(function (t) {
           var d = parseOilJSON(t);
           if (!d) throw new Error('bad');
-          out.innerHTML = oilRowsHTML(d, prov)
-            + '<div class="oil-note">92号按指导价，各站实际挂牌有每升几分的差异；想看附近加油站的实时挂牌价和优惠，点「定位附近加油站」。</div>';
+          last92 = d.price_92; last95 = d.price_95;
+          provBox.innerHTML = oilRowsHTML(d, prov);
+          if (!quiet) { out.style.display = 'none'; out.innerHTML = ''; }
+          if (lastPos) renderNear(lastPos);
         })
-        .catch(function () { aiFallback(prov); });
+        .catch(function () { if (!quiet) aiFallback(prov); });
     }
-    btn.onclick = function () {
-      var city = (ov.querySelector('#oilCityIn').value || '').trim() || cur;
-      var prov = CITY_PROV[city];
-      if (!prov) { aiFallback(city); return; }
-      queryProv(prov);
-    };
-    loc.onclick = function () {
-      var old = loc.textContent;
-      loc.disabled = true; loc.textContent = '定位中…';
+    function stationRowsHTML(list) {
+      return '<div class="oil-sec">附近加油站 <i>直线距离 · 5 公里内</i></div>'
+        + list.map(function (st) {
+          return '<div class="st-row" data-lat="' + st.lat + '" data-lon="' + st.lon + '" data-n="' + esc(st.name) + '">'
+            + '<div class="st-l"><b>' + esc(st.name) + '</b>'
+            + (st.addr ? '<span class="st-a">' + esc(st.addr) + '</span>' : '') + '</div>'
+            + '<div class="st-r"><span class="st-d">' + fmtKm(st.km) + '</span>'
+            + '<span class="st-p">' + (last92 ? '92号 ' + Number(last92).toFixed(2) : '看挂牌价') + '</span></div></div>';
+        }).join('')
+        + '<div class="oil-note">站点价格为本站的省指导价参考，实际挂牌/优惠点开站点在高德查看。</div>';
+    }
+    function renderNear(pos) {
+      lastPos = pos;
+      var key = amapKey();
+      nearBox.innerHTML = '<div class="srv-loading">正在查找附近加油站…</div>';
+      var task = key ? amapNearby(pos.lat, pos.lon, key) : osmNearby(pos.lat, pos.lon);
+      task.then(function (list) {
+        nearBox.innerHTML = stationRowsHTML(list);
+        bindRows();
+      }).catch(function () {
+        nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
+          + '<div class="oil-fallback">当前网络拿不到附近油站列表，点下面按钮在地图里看（含每站实时挂牌价与优惠）。</div>'
+          + '<button class="srv-btn" id="oilMap">在高德地图看附近加油站</button>';
+        var mb = nearBox.querySelector('#oilMap');
+        if (mb) mb.onclick = function () { openAmapSearch(pos); };
+      });
+    }
+    function bindRows() {
+      nearBox.querySelectorAll('.st-row').forEach(function (r) {
+        r.onclick = function () {
+          var lat = r.getAttribute('data-lat'), lon = r.getAttribute('data-lon'), n = r.getAttribute('data-n');
+          var u = 'https://uri.amap.com/marker?position=' + lon + ',' + lat + '&name=' + encodeURIComponent(n)
+            + '&src=cheguanjia&callnative=1&coordinate=gaode&callnative=1';
+          if (window.__ccNative) window.__ccNative({ type: 'openUrl', url: u });
+          else window.open(u, '_blank');
+        };
+      });
+    }
+    function openAmapSearch(pos) {
+      var u = 'https://uri.amap.com/search?keyword=' + encodeURIComponent('加油站')
+        + '&center=' + pos.lon + ',' + pos.lat + '&src=cheguanjia&callnative=1';
+      if (window.__ccNative) window.__ccNative({ type: 'openUrl', url: u });
+      else window.open(u, '_blank');
+    }
+    function doLocate() {
+      locBtn.disabled = true;
+      locTxt.textContent = '正在定位…';
       nativeLocation().then(function (pos) {
-        loc.disabled = false; loc.textContent = old;
-        if (!pos) { toastMsg('定位失败，可以手动选城市查油价'); return; }
-        var amap = 'https://uri.amap.com/search?keyword=' + encodeURIComponent('加油站')
-          + '&center=' + pos.lon + ',' + pos.lat + '&src=cheguanjia&callnative=1';
-        if (window.__ccNative) { window.__ccNative({ type: 'openUrl', url: amap }); }
-        else { window.open(amap, '_blank'); }
-        out.style.display = '';
-        out.innerHTML = '<div class="srv-loading">已打开地图查看附近加油站挂牌价，正在识别你所在的省份查油价…</div>';
+        locBtn.disabled = false;
+        locBtn.textContent = '重新定位';
+        if (!pos) {
+          locTxt.textContent = '定位失败，可在下方选城市查油价';
+          nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
+            + '<div class="oil-fallback">没有拿到位置。打开定位权限，或直接选下方城市查当日油价。</div>';
+          return;
+        }
+        locTxt.textContent = '已定位 · 附近加油站按距离排序';
+        renderNear(pos);
         httpGet('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + pos.lat + '&lon=' + pos.lon + '&accept-language=zh-CN', 8000)
           .then(function (t) {
             var j = null; try { j = JSON.parse(t); } catch (e) { }
             var st = (j && j.address && (j.address.state || j.address.province || '')) || '';
             var prov = '';
             for (var i = 0; i < PROV_LIST.length; i++) { if (st.indexOf(PROV_LIST[i]) >= 0) { prov = PROV_LIST[i]; break; } }
-            if (prov) { queryProv(prov); }
-            else { out.innerHTML = '<div class="srv-note">地图已打开。所在省份没识别出来，选个城市或输入城市名即可查本省油价。</div>'; }
+            if (prov) queryProv(prov, true);
           })
-          .catch(function () {
-            out.innerHTML = '<div class="srv-note">地图已打开，可查看附近加油站实时挂牌价。本省油价请选城市后查询。</div>';
-          });
+          .catch(function () { });
       });
+    }
+    locBtn.onclick = function () { locBtn.textContent = '刷新'; doLocate(); };
+    ov.querySelector('#oilGo').onclick = function () {
+      var city = (ov.querySelector('#oilCityIn').value || '').trim() || cur;
+      var prov = CITY_PROV[city];
+      if (!prov) { aiFallback(city); return; }
+      queryProv(prov);
     };
+    /* 高德 Key（可选）：填了就能在本页直接列出附近加油站 */
+    var keyToggle = ov.querySelector('#oilKeyToggle'), keyBox = ov.querySelector('#oilKeyBox');
+    keyToggle.onclick = function () {
+      keyBox.style.display = keyBox.style.display === 'none' ? '' : 'none';
+      ov.querySelector('#oilKeyIn').value = amapKey();
+    };
+    ov.querySelector('#oilKeySave').onclick = function () {
+      var k = (ov.querySelector('#oilKeyIn').value || '').trim();
+      saveAmapKey(k);
+      keyBox.style.display = 'none';
+      toastMsg(k ? '已保存，正在用高德数据刷新附近油站' : '已清除高德 Key');
+      if (lastPos) renderNear(lastPos);
+    };
+    doLocate();
   }
 
   /* ------------------------------------------------------------------ *
