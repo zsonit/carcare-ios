@@ -123,7 +123,7 @@
       + '.oil-loc-t{flex:1;font-size:12.5px;color:#5a6d86;line-height:1.4}'
       + '.oil-sec{font-size:13.5px;font-weight:800;color:#1b2a3d;margin:12px 0 2px}'
       + '.oil-sec i{font-style:normal;font-size:11px;color:#8a99ad;font-weight:600;margin-left:6px}'
-      + '.st-row{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid #eef3f9;cursor:pointer;border-radius:10px}'
+      + '.st-row{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid #eef3f9;cursor:pointer;border-radius:10px}'
       + '.st-row:active{background:#f4f9ff}'
       + '.st-l{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}'
       + '.st-l b{font-size:14px;color:#1b2a3d;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
@@ -132,15 +132,19 @@
       + '.st-d{font-size:12px;color:#0a84ff;font-weight:700}'
       + '.st-p{font-size:11.5px;color:#41536b;font-weight:600}'
       + '.srv-seg-sm button{padding:5px 11px;font-size:12px}'
-      + '.st-th{flex:0 0 54px;width:54px;height:54px;border-radius:10px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
+      + '.st-th{flex:0 0 46px;width:46px;height:46px;border-radius:9px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}'
       + '.st-th img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}'
-      + '.st-th i{font-style:normal;font-size:12px;font-weight:800;color:#fff}'
-      + '.st-nm{display:flex;align-items:center;gap:6px;min-width:0}'
-      + '.st-bdg{flex:0 0 auto;font-size:10px;font-weight:800;color:#fff;border-radius:5px;padding:1px 6px;line-height:1.5}'
-      + '.st-pr{font-size:12px;color:#d9480f;font-weight:700}'
-      + '.st-pr b{font-size:15px;font-weight:800}'
-      + '.st-gui{font-style:normal;font-size:11px;color:#8a99ad;font-weight:600;margin-left:4px}'
-      + '.st-tag{font-size:11px;font-weight:700;color:#e8590c;background:#fff1e6;border-radius:6px;padding:2px 7px;margin-top:2px}'
+      + '.st-th i{font-style:normal;font-size:11px;font-weight:800;color:#fff}'
+      + '.st-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}'
+      + '.st-name{font-size:14.5px;color:#1b2a3d;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.st-meta{font-size:11.5px;color:#8a99ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      + '.st-km{color:#41536b;font-weight:700}'
+      + '.st-cost{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px}'
+      + '.st-big{font-size:17px;font-weight:800;color:#e8590c;line-height:1.15;white-space:nowrap}'
+      + '.st-big em{font-style:normal;font-size:10px;font-weight:700;color:#8a99ad;margin-right:3px}'
+      + '.st-big i{font-style:normal;font-size:10.5px;font-weight:700}'
+      + '.st-big-no{font-size:12px}'
+      + '.st-cta{font-size:10.5px;font-weight:700;color:#e8590c;background:#fff1e6;border-radius:6px;padding:1px 7px}'
       + '.oil-src{color:#a9b6c8}'
       + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
       + '.oil-keyrow{margin-top:10px}'
@@ -590,23 +594,24 @@
       return list.map(function (st) {
         var br = st.brand || brandOf(st.name);
         var price = fuelPrice(fuelSel);
-        var label = fuelSel === '0' ? '0号柴油' : fuelSel + '号汽油';
+        var fl = fuelSel === '0' ? '0号' : fuelSel + '号';
         var thumb = '<div class="st-th" style="background:' + br.c + '"><i>' + br.t + '</i>'
           + (st.photo ? '<img src="' + esc(st.photo) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : '')
           + '</div>';
         return '<div class="st-row" data-lat="' + st.lat + '" data-lon="' + st.lon + '" data-n="' + esc(st.name) + '">'
           + thumb
-          + '<div class="st-l">'
-          + '<span class="st-nm"><b>' + esc(st.name) + '</b><span class="st-bdg" style="background:' + br.c + '">' + br.t + '</span></span>'
-          + (st.addr ? '<span class="st-a">' + esc(st.addr) + '</span>' : '')
-          + '<span class="st-pr">' + (price
-            ? label + ' <b>&yen;' + price + '</b>/L<i class="st-gui">省指导价 · 点站点看券后价</i>'
-            : '<i class="st-gui">点站点看该站实时挂牌与优惠</i>') + '</span>'
+          + '<div class="st-mid">'
+          + '<b class="st-name">' + esc(st.name) + '</b>'
+          + '<span class="st-meta"><span class="st-km">' + fmtKm(st.km) + '</span>' + (st.addr ? ' · ' + esc(st.addr) : '') + '</span>'
           + '</div>'
-          + '<div class="st-r"><span class="st-d">' + fmtKm(st.km) + '</span>'
-          + '<span class="st-tag">券后优惠 &rsaquo;</span></div></div>';
+          + '<div class="st-cost">'
+          + (price
+            ? '<span class="st-big"><em>' + fl + '</em>&yen;' + price + '<i>/L</i></span>'
+            : '<span class="st-big st-big-no">查优惠</span>')
+          + '<span class="st-cta">券后价 &rsaquo;</span>'
+          + '</div></div>';
       }).join('')
-        + '<div class="oil-note">列表价格为省发改委指导价；每家油站自己的优惠/券后价数据只在高德体系内，点任意站点直接跳到该站的高德页面查看实时价与券活动。</div>'
+        + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；每家油站自己的券后价只在高德体系内，点站点直接跳该站高德页查看实时优惠。</div>'
         + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
     }
     function renderList() {
