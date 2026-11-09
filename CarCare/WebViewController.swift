@@ -802,25 +802,28 @@ extension WebViewController {
     }
 
     func requestNativeLocation() {
-        CCLocationFetcher.shared.fetch { [weak self] loc in
+        CCLocationFetcher.shared.fetch { [weak self] loc, denied in
             guard let self = self else { return }
             if let c = loc {
                 let lat = String(format: "%.5f", c.coordinate.latitude)
                 let lon = String(format: "%.5f", c.coordinate.longitude)
-                self.evaluateJS("window.ccGeoResult && window.ccGeoResult({lat://(lat),lon://(lon)})")
+                self.evaluateJS("window.ccGeoResult && window.ccGeoResult({lat:\(lat),lon:\(lon)})")
+            } else if denied {
+                self.evaluateJS("window.ccGeoResult && window.ccGeoResult({denied:1})")
             } else {
-                self.evaluateJS("window.ccGeoResult && window.ccGeoResult(null)")
+                self.evaluateJS("window.ccGeoResult && window.ccGeoResult({failed:1})")
             }
         }
     }
 }
 
-/// 单次定位：只要一个坐标，拿到或失败都立刻回调
+/// 单次定位：只要一个坐标，拿到或失败都立刻回调；10 秒兜底超时
 final class CCLocationFetcher: NSObject, CLLocationManagerDelegate {
 
     static let shared = CCLocationFetcher()
     private let lm = CLLocationManager()
-    private var done: ((CLLocation?) -> Void)?
+    private var done: ((CLLocation?, Bool) -> Void)?
+    private var timeout: Timer?
 
     override private init() {
         super.init()
@@ -828,22 +831,40 @@ final class CCLocationFetcher: NSObject, CLLocationManagerDelegate {
         lm.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
-    func fetch(_ cb: @escaping (CLLocation?) -> Void) {
+    func fetch(_ cb: @escaping (CLLocation?, Bool) -> Void) {
         done = cb
+        startTimeout()
         switch lm.authorizationStatus {
         case .notDetermined:
             lm.requestWhenInUseAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
-            lm.requestLocation()
+            if CLLocationManager.locationServicesEnabled() {
+                lm.requestLocation()
+            } else {
+                finish(nil)
+            }
         default:
-            finish(nil)
+            finish(nil, denied: true)
         }
     }
 
-    private func finish(_ loc: CLLocation?) {
+    private func finish(_ loc: CLLocation?, denied: Bool = false) {
+        stopTimeout()
         let cb = done
         done = nil
-        cb?(loc)
+        cb?(loc, denied)
+    }
+
+    private func startTimeout() {
+        stopTimeout()
+        timeout = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
+            self?.finish(nil)
+        }
+    }
+
+    private func stopTimeout() {
+        timeout?.invalidate()
+        timeout = nil
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -851,7 +872,7 @@ final class CCLocationFetcher: NSObject, CLLocationManagerDelegate {
         case .authorizedWhenInUse, .authorizedAlways:
             if done != nil { manager.requestLocation() }
         case .denied, .restricted:
-            finish(nil)
+            finish(nil, denied: true)
         default:
             break
         }

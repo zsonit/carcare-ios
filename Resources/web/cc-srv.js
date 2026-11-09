@@ -623,10 +623,16 @@
       nativeLocation().then(function (pos) {
         locBtn.disabled = false;
         locBtn.textContent = '重新定位';
-        if (!pos) {
+        if (pos && pos.denied) {
+          locTxt.textContent = '定位权限未开启';
+          nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
+            + '<div class="oil-fallback">定位权限被拒绝。请到手机「设置」→「车管家」→「位置」选「使用App期间」，回来再点「重新定位」。</div>';
+          return;
+        }
+        if (!pos || pos.failed) {
           locTxt.textContent = '定位失败，可在下方选城市查油价';
           nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
-            + '<div class="oil-fallback">没有拿到位置。打开定位权限，或直接选下方城市查当日油价。</div>';
+            + '<div class="oil-fallback">没有拿到位置。可点「重新定位」再试，或直接选下方城市查当日油价。</div>';
           return;
         }
         locTxt.textContent = '已定位 · 附近加油站按距离排序';
