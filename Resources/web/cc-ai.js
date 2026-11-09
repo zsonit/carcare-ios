@@ -1326,6 +1326,7 @@
    * ------------------------------------------------------------------ */
   var voiceOv = null, voiceTxt = null, voiceBox = null;
   var holdOn = false, holdCancel = false, voiceGen = 0;
+  var holdBrief = false; /* 轻点（<280ms）：文字模式下点麦克风=切换到语音模式 */
   var webRec = null, webFinal = '';
 
   function micSupported() {
@@ -1382,10 +1383,13 @@
 
   function startHold(e) {
     if (!PAGE || holdOn) return;
+    /* 语音模式下右侧圆钮是「键盘」切换键：不触发录音，交给 click 切换 */
+    if (voiceMode() && e.target && e.target.closest && e.target.closest('.ai-mic')) return;
     if (!ready()) { openCfgSheet(); return; }
     e.preventDefault();
     holdOn = true;
     holdCancel = false;
+    holdBrief = false;
     lastHoldTs = Date.now();
     var gen = ++voiceGen;
     if (micEl) micEl.classList.add('hold');
@@ -1444,6 +1448,7 @@
     if (!holdOn) return;
     var cancel = holdCancel;
     var gen = voiceGen;
+    holdBrief = !cancel && (Date.now() - lastHoldTs) < 280;
     if (window.__ccNative) {
       voiceCleanup();
       try { window.__ccNative({ type: 'aiVoiceEnd', cancel: cancel }); } catch (err) { }
@@ -1461,7 +1466,9 @@
       if (handled || gen !== voiceGen) return;
       handled = true;
       var s = String(webFinal || '').trim();
-      if (s) ask(s); else toastMsg('没听清，请再试一次');
+      if (s) ask(s);
+      else if (holdBrief && !voiceMode()) setVoiceMode(true); /* 轻点麦克风=切语音模式 */
+      else toastMsg('没听清，请再试一次');
     }
     rec.onend = wrap;
     setTimeout(wrap, 1600);
@@ -1476,7 +1483,11 @@
   window.ccAiVoiceResult = function (t) {
     var s = String(t || '').trim();
     voiceCleanup();
-    if (!s) { toastMsg('没听清，请再试一次'); return; }
+    if (!s) {
+      if (holdBrief && !voiceMode()) { setVoiceMode(true); return; } /* 轻点麦克风=切语音模式 */
+      toastMsg('没听清，请再试一次');
+      return;
+    }
     if (!PAGE) return;
     if (!ready()) { openCfgSheet(); return; }
     ask(s);
