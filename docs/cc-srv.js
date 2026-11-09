@@ -90,6 +90,9 @@
       + '.srv-frow input,.srv-frow select,.srv-frow textarea,.srv-frow2 input,.srv-frow2 select,.srv-frow3 input,.srv-frow3 select'
       + '{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:12px;border:1px solid #cfdaea;background:#fff;'
       + 'font-size:15px;color:#1b2a3d;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}'
+      + '.srv-frow select,.srv-frow2 select,.srv-frow3 select,.srv-frow .srv-unit select'
+      + '{background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2710%27 height=%276%27 viewBox=%270 0 10 6%27%3E%3Cpath d=%27M1 1l4 4 4-4%27 stroke=%27%2341536b%27 stroke-width=%271.6%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E");'
+      + 'background-repeat:no-repeat;background-position:right 12px center;background-size:10px 6px;padding-right:30px;text-overflow:ellipsis}'
       + '.srv-frow textarea{resize:vertical;min-height:72px}'
       + '.srv-glabel{display:inline-flex;align-items:center;padding:4px 10px 4px 9px;margin:16px 0 8px;border-radius:4px 10px 10px 4px;'
       + 'background:rgba(10,132,255,.10);border-left:3px solid #0a84ff;font-size:12.5px;font-weight:800;color:#0a6fd8}'
@@ -477,11 +480,117 @@
   /* ------------------------------------------------------------------ *
    * 9. AI旧车估价
    * ------------------------------------------------------------------ */
+  /* 品牌车系对照表：'品牌' -> '车系1,车系2,...'（未收录的品牌可选「其他品牌」手动输入） */
+  var CAR_BRANDS = {
+    '大众': '朗逸,速腾,迈腾,帕萨特,高尔夫,Polo,宝来,凌渡,CC,途观L,途岳,途昂,探岳,途锐,揽境,桑塔纳,捷达VA3,ID.3,ID.4,ID.6',
+    '丰田': '卡罗拉,雷凌,凯美瑞,亚洲龙,亚洲狮,威驰,YARiS L 致炫,汉兰达,RAV4荣放,威兰达,锋兰达,卡罗拉锐放,兰德酷路泽,普拉多,奕泽IZOA,C-HR,赛那,格瑞维亚,bZ3,bZ4X',
+    '本田': '思域,雅阁,型格,英仕派,飞度,LIFE,凌派,享域,CR-V,皓影,XR-V,缤智,冠道,UR-V,奥德赛,艾力绅,极湃1',
+    '日产': '轩逸,蓝鸟,天籁,骐达,阳光,奇骏,逍客,劲客,楼兰,途达,途乐,艾睿雅',
+    '马自达': '昂克赛拉,阿特兹,马自达6,CX-4,CX-5,CX-30,CX-50行也,CX-8,CX-9',
+    '三菱': '欧蓝德,劲炫ASX,奕歌,帕杰罗,翼神',
+    '斯巴鲁': '森林人,力狮,傲虎,XV,BRZ',
+    '铃木': '雨燕,天语SX4,维特拉,启悦,奥拓',
+    '别克': '英朗,威朗,君威,君越,凯越,昂科拉,昂科威,昂科旗,GL8,微蓝6,微蓝7',
+    '雪佛兰': '科鲁泽,科鲁兹,科沃兹,迈锐宝XL,赛欧,创酷,创界,探界者,开拓者,畅巡',
+    '凯迪拉克': 'CT4,CT5,CT6,XT4,XT5,XT6,凯雷德',
+    '福特': '福克斯,福睿斯,蒙迪欧,金牛座,翼虎,锐际,锐界,探险者,领界,领裕,Mustang,电马',
+    'Jeep': '自由侠,自由光,指南者,大切诺基,牧马人,指挥官',
+    '克莱斯勒': '300C,大捷龙',
+    '奔驰': 'A级,C级,E级,S级,GLA,GLB,GLC,GLE,GLS,G级,V级,威霆,EQA,EQB,EQC,EQE,EQS,迈巴赫S级',
+    '宝马': '1系,3系,5系,7系,X1,X2,X3,X4,X5,X6,X7,Z4,i3,iX1,iX3,iX,M3,M5',
+    '奥迪': 'A3,A4L,A6L,A8L,A5,A7,Q2L,Q3,Q5L,Q7,Q8,e-tron,Q4 e-tron,TT,R8',
+    '保时捷': '911,718,Panamera,Cayenne,Macan,Taycan',
+    '路虎': '揽胜,揽胜运动版,揽胜极光,发现,发现运动版,卫士,星脉',
+    '捷豹': 'XE,XF,XFL,XJ,F-PACE,E-PACE,I-PACE',
+    '沃尔沃': 'S60,S90,XC40,XC60,XC90,C40,V40',
+    '特斯拉': 'Model 3,Model Y,Model S,Model X',
+    'MINI': 'MINI三门版,MINI五门版,CABRIO,CLUBMAN,COUNTRYMAN,ACEMAN',
+    'smart': 'fortwo,forfour,精灵#1,精灵#3,精灵#5',
+    '雷克萨斯': 'ES,IS,LS,UX,NX,RX,GX,LX,LM,CT',
+    '英菲尼迪': 'Q50L,Q70L,QX50,QX60,QX70,QX80',
+    '讴歌': 'CDX,RDX,TLX-L,MDX',
+    '现代': '伊兰特,领动,朗动,悦动,名图,索纳塔,瑞纳,悦纳,途胜,胜达,ix35,库斯途,菲斯塔,昂希诺',
+    '起亚': '焕驰,K2,K3,K5,福瑞迪,奕跑,智跑,狮铂拓界,KX3傲跑,KX5,嘉华',
+    '双龙': '柯兰多,蒂维拉,雷斯特',
+    '斯柯达': '明锐,速派,昕锐,柯迪亚克,柯珞克,柯米克',
+    '标致': '206,207,307,308,408,508L,2008,4008,5008',
+    '雪铁龙': '爱丽舍,C2,C4L,C5,C6,C3-XR,天逸,凡尔赛C5 X',
+    'DS': 'DS4S,DS5,DS5LS,DS6,DS7',
+    '雷诺': '科雷傲,科雷嘉,卡缤,梅甘娜,风朗',
+    '菲亚特': '菲翔,致悦,500',
+    '阿尔法·罗密欧': 'Giulia,Stelvio',
+    '玛莎拉蒂': 'Ghibli,总裁,Levante,Grecale,MC20',
+    '法拉利': '458,488,F8,Roma,SF90,Portofino,296 GTB',
+    '兰博基尼': 'Huracán,Urus,Aventador,Revuelto',
+    '迈凯伦': '540C,570S,720S,GT,Artura',
+    '宾利': '添越,欧陆,飞驰,慕尚',
+    '劳斯莱斯': '古思特,幻影,库里南,魅影,曜影',
+    '阿斯顿·马丁': 'DB11,Vantage,DBX,DBS',
+    '比亚迪': 'F3,速锐,秦,秦PLUS,秦Pro,汉,唐,宋,宋PLUS,宋Pro,宋L,元,元PLUS,海鸥,海豚,海豹,海狮07,驱逐舰05,护卫舰07,e2,夏',
+    '吉利': '帝豪,帝豪GL,帝豪GS,帝豪L,远景,远景X3,远景X6,星瑞,星越,星越L,博越,博越L,缤越,缤瑞,嘉际,豪越,ICON,熊猫mini,银河L6,银河L7,银河E8,银河E5',
+    '领克': '01,02,03,05,06,07,08,09',
+    '几何': '几何A,几何C,几何E',
+    '长安': '逸动,逸动DT,悦翔,CS15,CS35PLUS,CS55PLUS,CS75,CS75PLUS,CS85,CS95,UNI-T,UNI-K,UNI-V,欧尚X5,欧尚X7,欧尚Z6,Lumin,启源A05,启源A07,启源Q05',
+    '深蓝': 'SL03,S7,G318,L07,S05',
+    '阿维塔': '11,12,07',
+    '奇瑞': 'QQ3,QQ冰淇淋,小蚂蚁,艾瑞泽5,艾瑞泽7,艾瑞泽8,艾瑞泽GX,瑞虎3x,瑞虎5x,瑞虎7,瑞虎8,瑞虎8 PLUS,瑞虎9,欧萌达,风云A8,无界Pro',
+    '捷途': 'X70,X70PLUS,X90,大圣,旅行者',
+    'iCAR': '03,V23',
+    '哈弗': 'H1,H2,H5,H6,H7,H9,大狗,神兽,酷狗,猛龙,M6,F5,F7,H6新能源',
+    '魏牌': 'VV5,VV6,VV7,P8,摩卡,拿铁,玛奇朵,蓝山,高山',
+    '欧拉': '黑猫,白猫,好猫,好猫GT,闪电猫,芭蕾猫',
+    '坦克': '300,400,500,700',
+    '长城皮卡': '炮,金刚炮,山海炮,风骏5,风骏7',
+    '红旗': 'H5,H7,H9,HS3,HS5,HS7,E-QM5,L5',
+    '荣威': '350,360,550,i5,i6,RX3,RX5,RX5 MAX,RX8,eRX5,D7,鲸',
+    '名爵': 'MG3,MG5,MG6,MG7,MG ONE,ZS,HS,MG4',
+    '五菱': '宏光,宏光S,宏光MINIEV,NanoEV,缤果,悦也,星辰,星光,凯捷,荣光,征程',
+    '宝骏': '310,510,530,560,730,RS-3,RS-5,RM-5,KiWi EV,云朵',
+    '传祺': 'GA3S,GA4,GA6,GA8,GS3,GS4,GS5,GS8,M6,M8,影豹,影酷',
+    '埃安': 'AION S,AION Y,AION V,AION LX',
+    '昊铂': 'GT,HT,SR',
+    '蔚来': 'ES8,ES6,ES7,EC6,EC7,ET5,ET7',
+    '乐道': 'L60',
+    '小鹏': 'G3,G6,G9,P5,P7,P7i,X9,MONA M03',
+    '理想': '理想ONE,L6,L7,L8,L9,MEGA',
+    '零跑': 'T03,S01,C01,C11,C10,C16',
+    '哪吒': 'N01,V,U,S,GT,X',
+    '小米': 'SU7,SU7 Ultra,YU7',
+    '问界': 'M5,M7,M9',
+    '智界': 'S7,R7',
+    '极氪': '001,X,009,007,7X,MIX',
+    '智己': 'L6,LS6,LS7',
+    '岚图': 'FREE,梦想家,追光,知音',
+    '极狐': '阿尔法T,阿尔法S,阿尔法T5,阿尔法S5,考拉',
+    '腾势': 'D9,N7,N8,X',
+    '仰望': 'U8,U9',
+    '方程豹': '豹5,豹8',
+    '东风': '风神AX7,奕炫,皓极,纳米01,风行T5,菱智,风光580,风光S560,猛士917',
+    '启辰': '大V,星,T60,D60',
+    '江淮': '思皓A5,思皓X8,嘉悦X4,嘉悦X7,瑞风S3,瑞风M4,钇为3',
+    '海马': '福美来,海马7X,8S,普力马',
+    '奔腾': 'B30,B50,B70,T33,T55,T77,T99,森雅R7,NAT',
+    '众泰': 'T300,T600,SR7,SR9,大迈X5,Z300,E200',
+    '宝沃': 'BX5,BX7,BXi7',
+    '东南': 'DX3,DX7,A5翼舞,V3菱悦',
+    '猎豹': 'CS10,CS9,黑金刚',
+    '纳智捷': '大7 SUV,U6,S5',
+    '高合': 'HiPhi X,HiPhi Y,HiPhi Z',
+    '飞凡': 'ER6,R7,F7',
+    '合创': 'Z03,A06,V09',
+    '天际': 'ME5,ME7',
+    '爱驰': 'U5',
+    '云度': 'π1,π3',
+    '创维': 'EV6,HT-i',
+    '极石': '01',
+    '极越': '01,07'
+  };
   function openUsed() {
     var conds = ['优秀（准新车）', '良好（正常使用）', '一般（明显使用痕迹）', '有过事故或大修'];
     var provinces = ['北京', '上海', '天津', '重庆', '广东', '江苏', '浙江', '四川', '山东', '河南', '湖北', '湖南', '河北', '山西', '陕西', '安徽', '福建', '江西', '辽宁', '吉林', '黑龙江', '广西', '海南', '贵州', '云南', '甘肃', '青海', '内蒙古', '宁夏', '新疆', '西藏', '中国香港', '中国澳门', '中国台湾'];
-    var colors = ['黑色', '白色', '灰色', '银色', '红色', '蓝色', '绿色', '棕色', '其他'];
+    var colors = ['黑色', '白色', '珍珠白', '银色', '灰色', '深灰色', '红色', '蓝色', '绿色', '黄色', '橙色', '紫色', '金色', '香槟金', '棕色', '米色', '青色', '其他'];
     var energies = ['燃油', '纯电', '插电混动', '油电混动', '增程'];
+    var brandKeys = Object.keys(CAR_BRANDS);
     var curY = new Date().getFullYear();
     function yearArr(from) { var a = []; for (var y = curY; y >= from; y--) a.push(String(y)); return a; }
     function opts(arr, def) {
@@ -493,8 +602,9 @@
     var inner = '<div class="srv-lead">品牌、车型、上牌时间、里程和所在城市会直接影响估值区间，填得越全越准。</div>'
       + glabel('品牌、车型、年款')
       + '<div class="srv-frow3">'
-      + '<input id="usedBrand" placeholder="品牌">'
-      + '<input id="usedModel" placeholder="如：迈腾 330TSI">'
+      + '<select id="usedBrand" title="品牌"><option value="">选品牌</option>' + opts(brandKeys) + '<option value="其他品牌">其他品牌</option></select>'
+      + '<select id="usedModelSel" title="车型"><option value="">先选品牌</option></select>'
+      + '<input id="usedModelTxt" placeholder="车型，如轩逸" style="display:none">'
       + '<select id="usedVYear" title="年款">' + opts(years, String(curY - 3)) + '</select>'
       + '</div>'
       + glabel('上牌时间、里程、城市')
@@ -527,13 +637,35 @@
       + '<div class="srv-out" id="usedOut" style="display:none"></div>'
       + '<div class="srv-tip">估价由大模型根据市场行情经验给出，仅供参考；实际成交价以车况检测和线下议价为准。</div>';
     var ov = sheet('srvUsed', 'AI卖车助手', inner);
+    /* 品牌 -> 车型 级联；「其他品牌」切换为手动输入车型 */
+    var brandSel = ov.querySelector('#usedBrand');
+    var modelSel = ov.querySelector('#usedModelSel');
+    var modelTxt = ov.querySelector('#usedModelTxt');
+    brandSel.onchange = function () {
+      var b = brandSel.value;
+      if (b === '其他品牌') {
+        modelSel.style.display = 'none';
+        modelTxt.style.display = '';
+        modelTxt.value = '';
+        return;
+      }
+      modelSel.style.display = '';
+      modelTxt.style.display = 'none';
+      if (b && CAR_BRANDS[b]) {
+        modelSel.innerHTML = '<option value="">选车型</option>' + opts(CAR_BRANDS[b].split(','));
+      } else {
+        modelSel.innerHTML = '<option value="">先选品牌</option>';
+      }
+    };
     ov.querySelector('#usedGo').onclick = function () {
       function val(id) { return (ov.querySelector('#' + id).value || '').trim(); }
-      var brand = val('usedBrand'), model = val('usedModel');
+      var brand = val('usedBrand');
+      var model = modelSel.style.display === 'none' ? val('usedModelTxt') : val('usedModelSel');
       var km = val('usedKm');
-      if (!brand && !model) { toastMsg('先填一下品牌和车型'); return; }
+      if (!brand) { toastMsg('先选一下品牌'); return; }
+      if (brand !== '其他品牌' && !model) { toastMsg('再选一下车型'); return; }
       if (!km || Number(km) <= 0) { toastMsg('填一下已行驶里程'); return; }
-      var full = (brand + ' ' + model).trim();
+      var full = brand === '其他品牌' ? model : (brand + ' ' + model).trim();
       var vYear = val('usedVYear'), regY = val('usedRegY'), regM = val('usedRegM');
       var kmW = (Number(km) / 10000).toFixed(1);
       var cond = (function () { var b = ov.querySelector('#usedCond button.on'); return b ? b.getAttribute('data-v') : conds[1]; })();
