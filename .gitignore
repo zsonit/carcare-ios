@@ -25,3 +25,4 @@ tools/_shield.png
 tools/_dbg.*
 tools/_full_*.html
 tools/_smoke*
+amap_*.json
