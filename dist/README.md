@@ -2,7 +2,7 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `CheGuanJia-iOS-v2.5.0-9-unsigned.ipa` | 未签名 IPA，由 GitHub Actions（macOS）编译，需重签名后安装（最新版见 <https://github.com/zsonit/carcare-ios/releases/latest>） |
+| `CheGuanJia-iOS-v2.7.2-23-unsigned.ipa` | 未签名 IPA，由 GitHub Actions（macOS）编译，需重签名后安装（最新版见 <https://github.com/zsonit/carcare-ios/releases/latest>） |
 
 ## 方式一：不用签名，直接在 iPhone 上装（推荐先试这个）
 
