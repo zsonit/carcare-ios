@@ -191,6 +191,14 @@
     ov.innerHTML = '<div class="srv-sheet"><div class="srv-sh-head"><b>' + esc(title) + '</b>'
       + '<button class="srv-sh-close" onclick="this.closest(\'.srv-ov\').remove()">完成</button></div>'
       + inner + '</div>';
+    /* 统一事件委托：所有 .srv-seg 选项 chip 点击切换选中（各弹层无需重复绑定） */
+    ov.addEventListener('click', function (e) {
+      var b = e.target.closest('.srv-seg button');
+      if (!b || !ov.contains(b)) return;
+      var segEl = b.closest('.srv-seg');
+      segEl.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+    });
     document.body.appendChild(ov);
     return ov;
   }
