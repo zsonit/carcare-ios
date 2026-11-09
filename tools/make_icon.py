@@ -1,100 +1,115 @@
 # -*- coding: utf-8 -*-
-"""生成液态玻璃风格 App 图标（1024x1024）：SVG -> headless Chrome 光栅化"""
+"""生成液态玻璃风格 App 图标（1024x1024）：SVG -> headless Chrome 光栅化
+
+v3「黑曜石 · 银辉 · 琥珀」：
+  - 底色改深邃黑曜石蓝，极光光斑更克制，叠加细噪点防色带
+  - 玻璃盾重做成利落的现代徽章形，香槟金 rim 受光 + 镜面高光带
+  - 删掉金色油滴，改为极简银白车侧影 + 盾底一道琥珀金光弧
+"""
 import base64
 import io
 import os
 import subprocess
 
+from PIL import Image
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+ASSETS = os.path.join(ROOT, "CarCare", "Assets.xcassets", "AppIcon.appiconset")
+
+# AppIcon.appiconset 里的全部文件与尺寸（缺的补，有的覆盖）
+SIZES = {
+    "icon-20-ipad.png": 20, "icon-29.png": 29, "icon-29-ipad.png": 29,
+    "icon-40.png": 40, "icon-40-ipad.png": 40, "icon-58.png": 58,
+    "icon-58-ipad.png": 58, "icon-60.png": 60, "icon-76.png": 76,
+    "icon-76-ipad.png": 76, "icon-80.png": 80, "icon-80-ipad.png": 80,
+    "icon-87.png": 87, "icon-120.png": 120, "icon-152-ipad.png": 152,
+    "icon-167-ipad.png": 167, "icon-180.png": 180, "icon-1024.png": 1024,
+}
 
 
-def car_data_uri():
-    raw = open(os.path.join(ROOT, "tools", "car_front.png"), "rb").read()
-    return "data:image/png;base64," + base64.b64encode(raw).decode()
+def shield_path():
+    # 现代徽章形：顶部平缓圆肩，两肩利落，底部收成圆弧尖
+    return ("M 512 176 C 622 176 704 197 750 238 C 788 272 802 318 802 380 "
+            "L 802 540 C 802 650 694 736 512 792 C 330 736 222 650 222 540 "
+            "L 222 380 C 222 318 236 272 274 238 C 320 197 402 176 512 176 Z")
 
 
-# 车身剪影（右侧朝前），局部坐标 0..420 x 0..172
+# 车身侧影（右向朝前的溜背轿跑），局部坐标 0..436 x 0..170（轮拱底 y=140）
 CAR = """
-M 16 122
-L 16 100
-C 16 90 21 85 30 84
-L 80 80
-C 86 60 99 47 120 46
-L 252 43
-C 271 43 284 48 292 58
-L 336 84
-L 376 90
-C 396 94 408 102 410 114
-L 410 122
-L 362 122
-A 34 34 0 0 0 294 122
-L 144 122
-A 34 34 0 0 0 76 122
+M 26 140
+L 26 118
+C 26 106 33 100 47 98
+L 76 95
+C 102 92 122 88 142 82
+C 174 48 212 34 254 34
+C 286 36 310 44 332 62
+C 350 76 374 88 398 94
+C 424 98 434 106 436 118
+L 436 140
+L 380 140
+A 34 34 0 0 0 312 140
+L 152 140
+A 34 34 0 0 0 84 140
 Z
 """
 
 
-def shield_path():
-    # 盾牌：宽肩、侧边近直、底部收成圆弧尖
-    return ("M 296 214 C 356 200 430 192 512 192 C 594 192 668 200 728 214 "
-            "C 772 226 794 252 794 300 L 794 520 C 794 620 700 702 512 766 "
-            "C 324 702 230 620 230 520 L 230 300 C 230 252 252 226 296 214 Z")
-
-
 def build_svg():
     sh = shield_path()
-    car_uri = car_data_uri()
+    car = " ".join(CAR.split())
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
 <defs>
-  <linearGradient id="bg" x1="0.08" y1="0" x2="0.86" y2="1">
-    <stop offset="0" stop-color="#06182F"/>
-    <stop offset="0.46" stop-color="#0F3A72"/>
-    <stop offset="1" stop-color="#1A5FA8"/>
+  <linearGradient id="bg" x1="0.06" y1="0" x2="0.88" y2="1">
+    <stop offset="0" stop-color="#030A16"/>
+    <stop offset="0.5" stop-color="#081B33"/>
+    <stop offset="1" stop-color="#0F355E"/>
   </linearGradient>
-  <radialGradient id="glow1" cx="0.1" cy="0.94" r="0.6">
-    <stop offset="0" stop-color="#25E3C4" stop-opacity="0.6"/>
-    <stop offset="1" stop-color="#25E3C4" stop-opacity="0"/>
+  <radialGradient id="glow1" cx="0.08" cy="0.92" r="0.55">
+    <stop offset="0" stop-color="#2BD9C7" stop-opacity="0.38"/>
+    <stop offset="1" stop-color="#2BD9C7" stop-opacity="0"/>
   </radialGradient>
-  <radialGradient id="glow2" cx="0.94" cy="0.04" r="0.58">
-    <stop offset="0" stop-color="#8A63FF" stop-opacity="0.55"/>
-    <stop offset="1" stop-color="#8A63FF" stop-opacity="0"/>
+  <radialGradient id="glow2" cx="0.95" cy="0.05" r="0.5">
+    <stop offset="0" stop-color="#7B5CFF" stop-opacity="0.30"/>
+    <stop offset="1" stop-color="#7B5CFF" stop-opacity="0"/>
   </radialGradient>
-  <radialGradient id="glow4" cx="0.92" cy="0.9" r="0.46">
-    <stop offset="0" stop-color="#FFA92E" stop-opacity="0.34"/>
-    <stop offset="1" stop-color="#FFA92E" stop-opacity="0"/>
+  <radialGradient id="glow3" cx="0.88" cy="0.95" r="0.4">
+    <stop offset="0" stop-color="#E8A23C" stop-opacity="0.20"/>
+    <stop offset="1" stop-color="#E8A23C" stop-opacity="0"/>
   </radialGradient>
-  <linearGradient id="glass" x1="0.18" y1="0" x2="0.72" y2="1">
-    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.44"/>
-    <stop offset="0.42" stop-color="#DCEBFF" stop-opacity="0.18"/>
-    <stop offset="1" stop-color="#A9C8F5" stop-opacity="0.09"/>
+  <linearGradient id="glass" x1="0.16" y1="0" x2="0.74" y2="1">
+    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.40"/>
+    <stop offset="0.42" stop-color="#D8E9FF" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#A6C6F2" stop-opacity="0.07"/>
   </linearGradient>
-  <linearGradient id="rim" x1="0.1" y1="0" x2="0.4" y2="1">
+  <linearGradient id="rim" x1="0.12" y1="0" x2="0.5" y2="1">
     <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
-    <stop offset="0.4" stop-color="#FFFFFF" stop-opacity="0.34"/>
-    <stop offset="1" stop-color="#E4F1FF" stop-opacity="0.8"/>
+    <stop offset="0.45" stop-color="#DDEBFA" stop-opacity="0.34"/>
+    <stop offset="1" stop-color="#F2E4C4" stop-opacity="0.85"/>
+  </linearGradient>
+  <linearGradient id="rimGold" x1="0.7" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#FFE9B0" stop-opacity="0.9"/>
+    <stop offset="0.55" stop-color="#EFB45C" stop-opacity="0.5"/>
+    <stop offset="1" stop-color="#C98A2E" stop-opacity="0.85"/>
   </linearGradient>
   <linearGradient id="streak" x1="0" y1="0" x2="1" y2="0.3">
     <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
-    <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.42"/>
-    <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.14"/>
+    <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.5"/>
+    <stop offset="0.6" stop-color="#FFFFFF" stop-opacity="0.16"/>
     <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
   </linearGradient>
-  <linearGradient id="gold" x1="0.2" y1="0.02" x2="0.8" y2="1">
-    <stop offset="0" stop-color="#FFEDB4"/>
-    <stop offset="0.3" stop-color="#FFC963"/>
-    <stop offset="0.7" stop-color="#F09A22"/>
-    <stop offset="1" stop-color="#B3630B"/>
-  </linearGradient>
-  <linearGradient id="carBody" x1="0.2" y1="0" x2="0.6" y2="1">
+  <linearGradient id="silver" x1="0.2" y1="0" x2="0.62" y2="1">
     <stop offset="0" stop-color="#FFFFFF"/>
-    <stop offset="0.55" stop-color="#F4F9FF"/>
-    <stop offset="1" stop-color="#D8E6F8"/>
+    <stop offset="0.5" stop-color="#EEF5FD"/>
+    <stop offset="1" stop-color="#BDD2EA"/>
   </linearGradient>
-  <radialGradient id="dropGlow" cx="0.5" cy="0.6" r="0.55">
-    <stop offset="0" stop-color="#FFB43C" stop-opacity="0.5"/>
-    <stop offset="1" stop-color="#FFB43C" stop-opacity="0"/>
-  </radialGradient>
+  <linearGradient id="goldArc" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#C98A2E" stop-opacity="0.25"/>
+    <stop offset="0.28" stop-color="#FFD98A"/>
+    <stop offset="0.55" stop-color="#F0A32C"/>
+    <stop offset="0.85" stop-color="#FFD98A"/>
+    <stop offset="1" stop-color="#C98A2E" stop-opacity="0.25"/>
+  </linearGradient>
 
   <filter id="blur46" x="-45%" y="-45%" width="190%" height="190%">
     <feGaussianBlur stdDeviation="46"/>
@@ -108,67 +123,65 @@ def build_svg():
   <filter id="blur7" x="-40%" y="-40%" width="180%" height="180%">
     <feGaussianBlur stdDeviation="7"/>
   </filter>
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0"/>
+    <feComposite operator="in" in2="SourceGraphic"/>
+  </filter>
   <filter id="carShadow" x="-25%" y="-25%" width="150%" height="160%">
-    <feDropShadow dx="0" dy="9" stdDeviation="10" flood-color="#02121F" flood-opacity="0.38"/>
+    <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#02101F" flood-opacity="0.42"/>
   </filter>
 
-  <linearGradient id="carTint" x1="0.2" y1="0" x2="0.55" y2="1">
-    <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
-    <stop offset="0.55" stop-color="#DCEBFF" stop-opacity="0.35"/>
-    <stop offset="1" stop-color="#A9C6EC" stop-opacity="0.85"/>
-  </linearGradient>
-  <mask id="carMask"><image x="297" y="278" width="430" height="267" href="{car_uri}"/></mask>
   <clipPath id="clipShield"><path d="{sh}"/></clipPath>
+  <mask id="grainMask"><rect width="1024" height="1024" fill="#fff" filter="url(#grain)"/></mask>
 </defs>
 
 <!-- 背景 -->
 <rect width="1024" height="1024" fill="url(#bg)"/>
 <rect width="1024" height="1024" fill="url(#glow1)"/>
 <rect width="1024" height="1024" fill="url(#glow2)"/>
-<rect width="1024" height="1024" fill="url(#glow4)"/>
+<rect width="1024" height="1024" fill="url(#glow3)"/>
+<rect width="1024" height="1024" fill="#8FA9C9" opacity="0.045" mask="url(#grainMask)"/>
 
 <!-- 玻璃盾牌 -->
+<ellipse cx="512" cy="848" rx="242" ry="86" fill="#010913" opacity="0.45" filter="url(#blur46)"/>
 <path d="{sh}" fill="url(#glass)"/>
 <g clip-path="url(#clipShield)">
-  <ellipse cx="352" cy="284" rx="286" ry="200" fill="#A6DCFF" opacity="0.44" filter="url(#blur46)"/>
-  <ellipse cx="712" cy="690" rx="210" ry="200" fill="#3FE0CB" opacity="0.17" filter="url(#blur46)"/>
-  <ellipse cx="512" cy="786" rx="250" ry="86" fill="#FFFFFF" opacity="0.13" filter="url(#blur20)"/>
-  <g transform="rotate(-22 512 440)">
-    <rect x="-160" y="176" width="1400" height="94" fill="url(#streak)" filter="url(#blur7)"/>
-    <rect x="-160" y="312" width="1400" height="20" fill="#FFFFFF" opacity="0.12" filter="url(#blur7)"/>
+  <ellipse cx="398" cy="302" rx="300" ry="192" fill="#9FD9FF" opacity="0.36" filter="url(#blur46)"/>
+  <ellipse cx="705" cy="655" rx="205" ry="195" fill="#3FE0CB" opacity="0.14" filter="url(#blur46)"/>
+  <ellipse cx="512" cy="830" rx="270" ry="120" fill="#04101F" opacity="0.34" filter="url(#blur46)"/>
+  <g transform="rotate(-20 512 430)">
+    <rect x="-160" y="196" width="1400" height="104" fill="url(#streak)" filter="url(#blur7)"/>
+    <rect x="-160" y="336" width="1400" height="14" fill="#FFFFFF" opacity="0.13" filter="url(#blur7)"/>
   </g>
-  <path d="{sh}" fill="none" stroke="#0A2A4E" stroke-opacity="0.32" stroke-width="28" filter="url(#blur12)"/>
-  <ellipse cx="512" cy="916" rx="250" ry="130" fill="#08223F" opacity="0.32" filter="url(#blur46)"/>
+  <path d="{sh}" fill="none" stroke="#06213D" stroke-opacity="0.30" stroke-width="26" filter="url(#blur12)"/>
 </g>
 <path d="{sh}" fill="none" stroke="url(#rim)" stroke-width="5"/>
-<path d="{sh}" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1.3"
-      transform="translate(5 4) scale(0.99)" transform-origin="512 500"/>
+<path d="{sh}" fill="none" stroke="url(#rimGold)" stroke-width="3" opacity="0.85"/>
+<path d="{sh}" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="1.4"
+      transform="translate(4 3) scale(0.992)" transform-origin="512 484"/>
 
-<!-- 车身（正面剪影） -->
-<ellipse cx="512" cy="548" rx="214" ry="20" fill="#061F39" opacity="0.4" filter="url(#blur12)"/>
-<image x="297" y="278" width="430" height="267" href="{car_uri}"
-       filter="url(#carShadow)"/>
-<rect x="297" y="278" width="430" height="267" fill="url(#carTint)" mask="url(#carMask)" opacity="0.75"/>
-
-<!-- 金色油滴 -->
-<g>
-  <ellipse cx="512" cy="620" rx="104" ry="92" fill="url(#dropGlow)" filter="url(#blur20)"/>
-  <path d="M 512 570 C 512 570 568 646 568 682 C 568 716 543 738 512 738
-           C 481 738 456 716 456 682 C 456 646 512 570 512 570 Z" fill="url(#gold)"/>
-  <path d="M 512 570 C 512 570 568 646 568 682 C 568 716 543 738 512 738
-           C 481 738 456 716 456 682 C 456 646 512 570 512 570 Z"
-        fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="2.6"/>
-  <ellipse cx="495" cy="668" rx="12" ry="20" fill="#FFFFFF" opacity="0.72" transform="rotate(-14 495 668)" filter="url(#blur7)"/>
-  <ellipse cx="536" cy="712" rx="16" ry="9" fill="#FF9A2E" opacity="0.4" filter="url(#blur12)"/>
+<!-- 车身（极简侧影，金属银白） -->
+<ellipse cx="512" cy="598" rx="240" ry="22" fill="#04101F" opacity="0.42" filter="url(#blur12)"/>
+<g transform="translate(263 403) scale(1.08)">
+  <path d="{car}" fill="url(#silver)" filter="url(#carShadow)"/>
+  <circle cx="118" cy="140" r="30" fill="#0B1A2C"/>
+  <circle cx="346" cy="140" r="30" fill="#0B1A2C"/>
+  <circle cx="118" cy="140" r="11" fill="#DCE9F8" opacity="0.9"/>
+  <circle cx="346" cy="140" r="11" fill="#DCE9F8" opacity="0.9"/>
+  <path d="M 96 104 C 200 96 330 92 420 100" fill="none" stroke="#FFFFFF"
+        stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
 </g>
+
+<!-- 琥珀金光弧（托底） -->
+<path d="M 302 660 Q 512 588 722 660" fill="none" stroke="url(#goldArc)" stroke-width="22"
+      stroke-linecap="round" opacity="0.28" filter="url(#blur12)"/>
+<path d="M 302 660 Q 512 588 722 660" fill="none" stroke="url(#goldArc)" stroke-width="9"
+      stroke-linecap="round"/>
 </svg>"""
 
 
-def main():
-    svg = build_svg()
-    svg_path = os.path.join(ROOT, "tools", "icon.svg")
-    io.open(svg_path, "w", encoding="utf-8").write(svg)
-
+def render_1024(svg):
     html = ("<!DOCTYPE html><html><head><meta charset='utf-8'>"
             "<style>html,body{margin:0;padding:0;width:1024px;height:1024px;overflow:hidden;background:#000}"
             "svg{display:block}</style></head><body>" + svg + "</body></html>")
@@ -180,7 +193,28 @@ def main():
                     "--force-device-scale-factor=1", "--window-size=1024,1024",
                     "--screenshot=" + png, "file:///" + html_path.replace("\\", "/")],
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print("png:", png, os.path.getsize(png) if os.path.exists(png) else "FAIL")
+    if not os.path.exists(png):
+        raise SystemExit("render failed")
+    return png
+
+
+def export_assets(master):
+    img = Image.open(master).convert("RGB")
+    for name, size in SIZES.items():
+        out = os.path.join(ASSETS, name)
+        if size == 1024:
+            img.save(out)
+        else:
+            img.resize((size, size), Image.LANCZOS).save(out)
+        print("asset:", name)
+
+
+def main():
+    svg = build_svg()
+    io.open(os.path.join(ROOT, "tools", "icon.svg"), "w", encoding="utf-8").write(svg)
+    master = render_1024(svg)
+    export_assets(master)
+    print("png:", master, os.path.getsize(master))
 
 
 if __name__ == "__main__":
