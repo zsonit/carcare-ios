@@ -395,6 +395,7 @@
   function openPick() {
     var energies = ['不限', '燃油', '纯电', '插电混动', '油电混动'];
     var types = ['不限', '轿车', 'SUV', 'MPV', '两厢小车', '皮卡/越野'];
+    var seats = ['不限', '5座', '6座', '7座及以上'];
     var uses = ['日常通勤', '家用带娃', '长途自驾', '商务接待', '跑网约车', '越野撒野'];
     function seg(id, arr, def) {
       return '<div class="srv-frow"><label>' + id.label + '</label><div class="srv-seg" data-seg="' + id.key + '">'
@@ -404,6 +405,7 @@
     var inner = '<div class="srv-frow"><label>预算（万元）</label><input id="pickBudget" type="number" inputmode="decimal" placeholder="如：15（可填区间 12-18）"></div>'
       + seg({ label: '能源类型', key: 'energy' }, energies, '不限')
       + seg({ label: '车型', key: 'body' }, types, '不限')
+      + seg({ label: '座位数', key: 'seats' }, seats, '不限')
       + seg({ label: '主要用途', key: 'use' }, uses, '日常通勤')
       + '<div class="srv-frow"><label>其它要求（选填）</label><textarea id="pickMore" placeholder="比如：百公里油耗低于6L、后排要大、保值率高、北方冬天用…"></textarea></div>'
       + '<button class="srv-btn" id="pickGo">让 AI 帮我选车</button>'
@@ -421,7 +423,7 @@
       var out = ov.querySelector('#pickOut'); out.style.display = '';
       aiRun(out, [
         { role: 'system', content: '你是懂车的选车顾问，熟悉中国市场在售车型。推荐 3 款最匹配的车（含指导价区间），每款给 2 行推荐理由和 1 个注意点，最后给 1 条比价建议。总长 350 字内。不收厂家广告，客观中立。' },
-        { role: 'user', content: '预算' + budget + '万元；能源：' + segV('energy') + '；车型：' + segV('body') + '；用途：' + segV('use') + (more ? '；其它要求：' + more : '') + '。请推荐。' }
+        { role: 'user', content: '预算' + budget + '万元；能源：' + segV('energy') + '；车型：' + segV('body') + '；座位：' + segV('seats') + '；用途：' + segV('use') + (more ? '；其它要求：' + more : '') + '。请推荐。' }
       ], this);
     };
   }
