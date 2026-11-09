@@ -3,6 +3,7 @@ import WebKit
 import UserNotifications
 import Speech
 import AVFoundation
+import PhotosUI
 
 /// 车管家 iOS 版：原生外壳 + WKWebView（内置同一套页面）+ 原生能力桥接
 final class WebViewController: UIViewController {
@@ -557,9 +558,105 @@ extension WebViewController: WKScriptMessageHandler {
         case "aiAbort":
             AIClient.shared.cancel(id: body["id"] as? String ?? "")
 
+        case "pickImage":
+            // 拍照问AI / 报告解读：拍照或从相册选图，压缩后回传网页
+            presentImagePicker()
+
         default:
             break
         }
+    }
+}
+
+// MARK: - 选图（拍照问AI / 报告解读）
+
+extension WebViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate, PHPickerViewControllerDelegate {
+
+    /// WebView 的 <input type=file> 在 iOS 里不生效，原生弹「拍照 / 相册」选择
+    func presentImagePicker() {
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            alert.addAction(UIAlertAction(title: "拍照", style: .default) { [weak self] _ in
+                self?.openCameraPicker()
+            })
+        }
+        alert.addAction(UIAlertAction(title: "从相册选择", style: .default) { [weak self] _ in
+            self?.openLibraryPicker()
+        })
+        alert.addAction(UIAlertAction(title: "取消", style: .cancel) { [weak self] _ in
+            self?.returnPickedImage(nil)
+        })
+        present(alert, animated: true)
+    }
+
+    private func openCameraPicker() {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    private func openLibraryPicker() {
+        var config = PHPickerConfiguration()
+        config.filter = .images
+        config.selectionLimit = 1
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+
+    func imagePickerController(_ picker: UIImagePickerController,
+                               didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        picker.dismiss(animated: true)
+        let image = (info[.editedImage] ?? info[.originalImage]) as? UIImage
+        returnPickedImage(image)
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+        returnPickedImage(nil)
+    }
+
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        guard let item = results.first?.itemProvider, item.canLoadObject(ofClass: UIImage.self) else {
+            returnPickedImage(nil)
+            return
+        }
+        item.loadObject(ofClass: UIImage.self) { [weak self] obj, _ in
+            DispatchQueue.main.async {
+                self?.returnPickedImage(obj as? UIImage)
+            }
+        }
+    }
+
+    /// 压到最长边 1280、JPEG 0.8，以 data URL 回传网页（window.ccPickImageResult）
+    private func returnPickedImage(_ image: UIImage?) {
+        guard let image = image else {
+            evaluateJS("window.ccPickImageResult && window.ccPickImageResult(null)")
+            return
+        }
+        let maxSide: CGFloat = 1280
+        var target = image
+        let longSide = max(image.size.width, image.size.height)
+        if longSide > maxSide {
+            let k = maxSide / longSide
+            let size = CGSize(width: image.size.width * k, height: image.size.height * k)
+            UIGraphicsBeginImageContextWithOptions(size, true, 1)
+            image.draw(in: CGRect(origin: .zero, size: size))
+            if let scaled = UIGraphicsGetImageFromCurrentImageContext() { target = scaled }
+            UIGraphicsEndImageContext()
+        }
+        guard let data = target.jpegData(compressionQuality: 0.8) else {
+            evaluateJS("window.ccPickImageResult && window.ccPickImageResult(null)")
+            return
+        }
+        let b64 = data.base64EncodedString()
+        evaluateJS("window.ccPickImageResult && window.ccPickImageResult('data:image/jpeg;base64,\(b64)')")
+    }
+
+    private func evaluateJS(_ js: String) {
+        webView.evaluateJavaScript(js, completionHandler: nil)
     }
 }
 
@@ -582,6 +679,9 @@ extension WebViewController: WKNavigationDelegate {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
                 decisionHandler(.cancel)
             }
+        } else if url.scheme == "tel" || url.scheme == "mailto" {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            decisionHandler(.cancel)
         } else if url.scheme == "about" || url.scheme == "data" || url.scheme == "blob" {
             decisionHandler(.allow)
         } else {

@@ -16,6 +16,9 @@
   }
   window.__ccNative = post;
 
+  /* 能力标记：iOS 原生支持拍照/相册选图（网页 <input type=file> 在 WKWebView 里无效） */
+  window.__ccPickImage = true;
+
   /* 1) 本身就是独立 App：隐藏「安装到手机」卡片（与安卓 WebView 版一致） */
   var styleInjected = false;
   function injectStyle() {

@@ -716,6 +716,9 @@
       <div id="reminderList"></div>
     </section>
 
+    <!-- 服务（AI 用车服务集合） -->
+    <section class="screen hidden" id="screen-srv"></section>
+
     <!-- 维保服务 -->
     <section class="screen hidden" id="screen-services">
       <div class="seg" id="recSeg">
@@ -1023,6 +1026,7 @@
   <nav id="nav">
     <div id="navLensTrail" aria-hidden="true"></div>
     <div id="navLens" aria-hidden="true"><i class="lens-fill"></i></div>    <button class="on" data-screen="reminders" onclick="showScreen('reminders')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8.6c0-3.3-2.7-6-6-6s-6 2.7-6 6c0 6.2-2.4 7.9-2.4 7.9h16.8S18 14.8 18 8.6"/><path d="M13.7 20.2a2 2 0 0 1-3.4 0"/></svg></span>提醒<span class="dot hidden" id="navDot"></span></button>
+    <button data-screen="srv" onclick="showScreen('srv')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2.2"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2.2"/></svg></span>服务</button>
     <button data-screen="services" onclick="showScreen('services')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.6 6.3a1 1 0 0 0 0 1.4l1.7 1.7a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-8 8L6.7 20.4a2.1 2.1 0 0 1-3-3l6.8-6.8a6 6 0 0 1 8-8z"/></svg></span>记录</button>
     <button data-screen="archive" onclick="showScreen('archive')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 15.2h18"/><path d="M4.6 15.2v3.4a.9.9 0 0 0 .9.9h1.5a.9.9 0 0 0 .9-.9v-1.1"/><path d="M16.1 17.5v1.1a.9.9 0 0 0 .9.9h1.5a.9.9 0 0 0 .9-.9v-3.4"/><path d="M3 15.2l1.7-4.8a2.4 2.4 0 0 1 2.3-1.6h10a2.4 2.4 0 0 1 2.3 1.6L21 15.2"/><path d="M6.4 12.3h11.2"/></svg></span>车库</button>
     <button data-screen="finance" onclick="showScreen('finance')"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-5"/></svg></span>花费</button>
@@ -1037,6 +1041,7 @@
 <!-- 增强模块：必须在主脚本之前加载，供 init() 期间调用 -->
 <script src="cc-ext.js"></script>
 <script src="cc-ai.js"></script>
+<script src="cc-srv.js"></script>
 <script>
 /* ============ 数据层 ============ */
 const KEY='carCareDB_v1';
@@ -1943,6 +1948,7 @@ function showScreen(s){
   if(s==='settings')renderSettings();
   if(s==='services'){curBill={};customNames=[];document.getElementById('svcMileage').value=curVehicle().mileage||'';renderCatTabs();renderItemBill();
     if(typeof pickRec==='function')pickRec(typeof recPane==='string'?recPane:'service');}
+  if(s==='srv'&&typeof window.ccSrvRender==='function')window.ccSrvRender();
 }
 function refreshVehicleSelect(){
   const sel=document.getElementById('vehicleSelect');

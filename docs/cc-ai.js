@@ -836,7 +836,42 @@
     + '  transform-origin:center;animation:aiWave .9s ease-in-out infinite}'
     + '@keyframes aiWave{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}'
     + '.ai-voicetxt{min-height:40px;font-size:14.5px;line-height:1.5;color:var(--ink,#16233a);'
-    + '  font-weight:600;display:flex;align-items:center;justify-content:center;word-break:break-word}';
+    + '  font-weight:600;display:flex;align-items:center;justify-content:center;word-break:break-word}'
+    + '.ai-cert{flex:none;display:flex;align-items:center;gap:8px;padding:7px 14px;font-size:12px;font-weight:650;'
+    + '  color:#2c4a73;background:linear-gradient(90deg,rgba(10,132,255,.14),rgba(139,92,246,.10));'
+    + '  border-bottom:1px solid rgba(150,175,205,.22)}'
+    + '.ai-cert svg{width:15px;height:15px;flex:none;fill:none;stroke:#0a84ff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}'
+    + '.ai-cert b{color:#0a6fd8;font-weight:800}'
+    + '.ai-cert.click{cursor:pointer}'
+    + '.ai-welcome{text-align:center;padding:26px 8px 10px}'
+    + '.ai-wl-ava{width:88px;height:88px;margin:0 auto 12px;border-radius:32px;display:flex;align-items:center;justify-content:center;'
+    + '  background:linear-gradient(150deg,#dfe9ff,#f2e9ff 60%,#e3f0ff);box-shadow:0 16px 30px -16px rgba(88,86,214,.45),inset 0 1px 0 rgba(255,255,255,.8)}'
+    + '.ai-wl-ava svg{width:52px;height:52px;fill:none;stroke:#5b6cf0;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}'
+    + '.ai-welcome h3{margin:0 0 8px;font-size:20px;font-weight:900;color:#16283c;letter-spacing:-.2px}'
+    + '.ai-welcome p{margin:0 auto;max-width:310px;font-size:13px;line-height:1.7;color:#67788e}'
+    + '.ai-wl-h{display:flex;align-items:center;gap:6px;margin:20px 0 10px;font-size:13px;font-weight:800;color:#0a6fd8;text-align:left}'
+    + '.ai-sugg{display:flex;flex-direction:column;gap:9px}'
+    + '.ai-sugg button{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:14px;border:1px solid rgba(150,175,205,.4);'
+    + '  background:rgba(255,255,255,.92);font-size:14px;font-weight:650;color:#22344a;text-align:left;'
+    + '  box-shadow:0 2px 10px -8px rgba(16,44,80,.5)}'
+    + '.ai-sugg button:active{background:#f0f6ff}'
+    + '.ai-sugg .arr{margin-left:auto;color:#9fb0c4;flex:none;font-weight:700}'
+    + '.ai-hold{flex:1;min-width:0;height:44px;border-radius:19px;background:#fff;border:1px solid rgba(150,175,205,.4);'
+    + '  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#16233a;'
+    + '  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;'
+    + '  box-shadow:0 2px 8px -6px rgba(16,44,80,.5)}'
+    + '.ai-hold:active,.ai-hold.rec{background:linear-gradient(180deg,#eaf4ff,#ddf0ff);border-color:rgba(10,132,255,.5);color:#0a6fd8}'
+    + '.ai-hold svg{width:18px;height:18px;margin-right:7px;fill:none;stroke:#0a84ff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}'
+    + '.ai-plus{width:44px;height:44px;flex:none;border-radius:50%;border:0;color:#51627a;display:flex;align-items:center;justify-content:center;'
+    + '  background:rgba(16,44,80,.07)}'
+    + '.ai-plus:active{background:rgba(16,44,80,.14)}'
+    + '.ai-plus svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;pointer-events:none}'
+    + '.ai-foot{display:flex;align-items:center;gap:8px;margin-top:7px}'
+    + '.ai-car{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;border:1px solid rgba(150,175,205,.45);'
+    + '  background:rgba(255,255,255,.85);color:#7c8ba1;flex:none}'
+    + '.ai-car.on{color:#0a6fd8;border-color:rgba(10,132,255,.45);background:rgba(10,132,255,.08)}'
+    + '.ai-footnote{flex:1;text-align:right;font-size:10.5px;color:#9fb0c4}'
+    + '.ai-hide{display:none!important}';
 
   function injectStyle() {
     if (document.getElementById('ccAiStyle')) return;
@@ -945,7 +980,24 @@
   /* ------------------------------------------------------------------ *
    * 11. 对话页
    * ------------------------------------------------------------------ */
-  var PAGE = null, scrollEl = null, listEl = null, inputEl = null, sendBtn = null, micEl = null;
+  var PAGE = null, scrollEl = null, listEl = null, inputEl = null, sendBtn = null, micEl = null, holdEl = null;
+
+  /* 语音优先输入：按住说话胶囊 vs 键盘输入，会话级记忆 */
+  var _voiceMode = null;
+  function voiceMode() {
+    if (_voiceMode === null) _voiceMode = micSupported();
+    return !!_voiceMode;
+  }
+  function setVoiceMode(on) {
+    _voiceMode = !!on;
+    if (!PAGE) return;
+    var ta = document.getElementById('aiIn');
+    var hp = document.getElementById('aiHold');
+    if (ta) ta.classList.toggle('ai-hide', on);
+    if (hp) hp.classList.toggle('ai-hide', !on);
+    if (micEl && micSupported()) micEl.innerHTML = on ? kbSvg() : micSvg();
+    if (!on && ready()) setTimeout(function () { if (inputEl) inputEl.focus(); }, 120);
+  }
 
   function openAI(tab) {
     injectStyle();
@@ -954,24 +1006,34 @@
     el.className = 'ai-page';
     el.id = 'aiPage';
     el.innerHTML = '<div class="ai-head">'
-      + '<div class="ttl"><b>AI 车况助手</b><span id="aiSub">' + (ready() ? esc(prov().name + ' · ' + apiModel()) : '还没配置模型') + '</span></div>'
+      + '<div class="ttl"><b>AI 车管家</b><span id="aiSub">' + (ready() ? esc(prov().name + ' · ' + apiModel()) : '还没配置模型') + '</span></div>'
       + '<button onclick="ccAiOpenCfg()">设置</button>'
       + '<button onclick="closeAI()">关闭</button>'
       + '</div>'
+      + '<div class="ai-cert" id="aiCert"></div>'
       + '<div class="ai-scroll" id="aiScroll"><div id="aiList"></div></div>'
       + '<div class="ai-bar">'
       + '<div class="ai-chips" id="aiChips"></div>'
       + '<div class="ai-inrow">'
-      + '<textarea class="ai-in" id="aiIn" rows="1" placeholder="问点什么，或按住麦克风说话"></textarea>'
-      + '<button class="ai-mic" id="aiMic" aria-label="按住说话">'
-      + '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/>'
-      + '<path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>'
+      + '<button class="ai-plus" id="aiPlus" aria-label="更多服务">'
+      + '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>'
+      + '</button>'
+      + '<textarea class="ai-in' + (voiceMode() ? ' ai-hide' : '') + '" id="aiIn" rows="1" placeholder="问点什么，比如：下次该保养什么？"></textarea>'
+      + '<div class="ai-hold' + (voiceMode() ? '' : ' ai-hide') + '" id="aiHold">'
+      + micSvg() + '按住 说话</div>'
+      + '<button class="ai-mic" id="aiMic" aria-label="语音/键盘切换">'
+      + (voiceMode() ? kbSvg() : micSvg())
       + '</button>'
       + '<button class="ai-send" id="aiSend" onclick="ccAiSend()" aria-label="发送">'
       + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5"/>'
       + '<path d="M5.6 11.4 12 5l6.4 6.4"/></svg>'
       + '</button>'
-      + '</div></div>';
+      + '</div>'
+      + '<div class="ai-foot">'
+      + '<button class="ai-car' + (cfg().useCar === false ? '' : ' on') + '" id="aiCar">依车作答：' + (cfg().useCar === false ? '关' : '开') + '</button>'
+      + '<span class="ai-footnote">内容由 AI 生成，仅供参考</span>'
+      + '</div>'
+      + '</div>';
     document.body.appendChild(el);
     PAGE = el;
     scrollEl = el.querySelector('#aiScroll');
@@ -979,8 +1041,10 @@
     inputEl = el.querySelector('#aiIn');
     sendBtn = el.querySelector('#aiSend');
     micEl = el.querySelector('#aiMic');
+    holdEl = el.querySelector('#aiHold');
 
     injectStyle();
+    renderCert();
 
     var chips = el.querySelector('#aiChips');
     chips.innerHTML = QUICK.map(function (q) {
@@ -995,19 +1059,102 @@
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
     });
 
-    if (micEl) {
-      if (!micSupported()) micEl.style.display = 'none';
-      micEl.addEventListener('pointerdown', startHold);
-      micEl.addEventListener('pointermove', moveHold);
-      micEl.addEventListener('pointerup', endHold);
-      micEl.addEventListener('pointercancel', endHold);
-      micEl.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    /* 语音/键盘模式切换（点按切换；按住说话由 pointer 事件接管，不触发 click 切换） */
+    micEl.addEventListener('click', function () {
+      if (Date.now() - lastHoldTs < 450) return;
+      setVoiceMode(!voiceMode());
+    });
+
+    /* 按住说话：文字模式下按麦克风，语音模式下按大胶囊 */
+    var holdTargets = [micEl, holdEl].filter(Boolean);
+    holdTargets.forEach(function (t) {
+      t.addEventListener('pointerdown', startHold);
+      t.addEventListener('pointermove', moveHold);
+      t.addEventListener('pointerup', endHold);
+      t.addEventListener('pointercancel', endHold);
+      t.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+    if (!micSupported()) {
+      micEl.style.display = 'none';
+      if (holdEl) holdEl.style.display = 'none';
+      setVoiceMode(false);
     }
+
+    /* ⊕ 更多服务：拍照问AI / 报告解读 / 服务页 */
+    el.querySelector('#aiPlus').addEventListener('click', function () {
+      openPlusSheet();
+    });
+
+    /* 依车作答开关 */
+    el.querySelector('#aiCar').addEventListener('click', function () {
+      var on = cfg().useCar === false ? true : false; /* 将要变成的状态 */
+      saveCfg({ useCar: on });
+      this.classList.toggle('on', on);
+      this.textContent = '依车作答：' + (on ? '开' : '关');
+      toastMsg(on ? '回答将结合你的车辆记录' : '已关闭车辆数据，仅通用回答');
+    });
 
     renderThread();
     if (tab === 'settings') setTimeout(openCfgSheet, 60);
-    setTimeout(function () { if (inputEl && ready()) inputEl.focus(); }, 260);
+    setTimeout(function () {
+      if (inputEl && !voiceMode() && ready()) inputEl.focus();
+    }, 260);
   }
+
+  function micSvg() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/>'
+      + '<path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>';
+  }
+  function kbSvg() {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/>'
+      + '<path d="M7 10h.01M11 10h.01M15 10h.01M7 13.5h.01M11 13.5h.01M15 13.5h.01M8 16.5h8"/></svg>';
+  }
+  function renderCert() {
+    var el = document.getElementById('aiCert');
+    if (!el) return;
+    var v = curV();
+    var shield = '<svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.4 3 8.4 7 10 4-1.6 7-5.6 7-10V6z"/><path d="m9 11.5 2.2 2.2L15.5 9.5"/></svg>';
+    if (S(v.name)) {
+      el.innerHTML = shield + '<span>已绑定<b>「' + esc(S(v.name) + (v.plate ? ' ' + v.plate : '')) + '」</b>，回答基于你的真实维保记录</span>';
+      el.classList.remove('click');
+      el.onclick = null;
+    } else {
+      el.innerHTML = shield + '<span>添加车辆后回答更精准，<b>去添加 →</b></span>';
+      el.classList.add('click');
+      el.onclick = function () { closeAI(); try { showScreen('archive'); } catch (e) { } };
+    }
+  }
+  function openPlusSheet() {
+    var old = document.getElementById('aiPlusSheet');
+    if (old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'aiPlusSheet';
+    ov.className = 'srv-ov';
+    ov.onclick = function (e) { if (e.target === ov) ov.remove(); };
+    function row(icon, t, d, fn) {
+      return '<div class="srv-card srv-g3" style="margin-bottom:9px" onclick="' + fn + '">'
+        + '<div class="srv-ic">' + icon + '</div>'
+        + '<div class="srv-tt"><b>' + t + '</b><span>' + d + '</span></div>'
+        + '<div class="srv-arr">›</div></div>';
+    }
+    ov.innerHTML = '<div class="srv-sheet"><div class="srv-sh-head"><b>更多服务</b>'
+      + '<button class="srv-sh-close" onclick="this.closest(\'.srv-ov\').remove()">完成</button></div>'
+      + row(ICONS_CAM, '拍照问AI', '拍下故障灯、异常部位，AI 帮你看', 'ccAiPlusGo(\'photo\')')
+      + row(ICONS_DOC, '报告解读', '上传保养单据/检测报告，专业解读', 'ccAiPlusGo(\'report\')')
+      + row(ICONS_SRV, '全部用车服务', '油价 / 选车 / 估价 / 救援 / 写手', 'ccAiPlusGo(\'srv\')')
+      + '</div>';
+    document.body.appendChild(ov);
+  }
+  window.ccAiPlusGo = function (w) {
+    var ov = document.getElementById('aiPlusSheet');
+    if (ov) ov.remove();
+    if (w === 'photo' && window.ccSrvOpen) ccSrvOpen('photo');
+    else if (w === 'report' && window.ccSrvOpen) ccSrvOpen('report');
+    else { closeAI(); try { showScreen('srv'); } catch (e) { } }
+  };
+  var ICONS_CAM = '<svg viewBox="0 0 24 24" stroke="#3c9e5f" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6.5" width="17" height="12.5" rx="2.6"/><circle cx="12" cy="12.8" r="3.4"/><path d="M9 6.5l1.2-2h3.6L15 6.5"/></svg>';
+  var ICONS_DOC = '<svg viewBox="0 0 24 24" stroke="#4a63d8" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="12" height="17" rx="2.4"/><path d="M8 8h5M8 11.5h3"/><circle cx="15.5" cy="15.5" r="3.2"/><path d="M18 18l2.6 2.6"/></svg>';
+  var ICONS_SRV = '<svg viewBox="0 0 24 24" stroke="#e2892b" fill="none" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2.2"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2.2"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2.2"/></svg>';
 
   function closeAI() {
     if (holdOn) abortHold('');
@@ -1017,6 +1164,7 @@
     if (el) el.remove();
     PAGE = null;
     micEl = null;
+    holdEl = null;
   }
 
   function nearBottom() {
@@ -1037,14 +1185,32 @@
     list.forEach(function (m, i) {
       html += msgHtml(m, i);
     });
-    if (!list.length && ready()) {
-      html += '<div class="ai-msg"><div class="ai-ava">AI</div><div class="ai-bub">'
-        + '<div class="ai-l">我已经读了你车上的记录。想问什么直接说，也可以点下面的常见问题。</div>'
-        + '<div class="ai-l" style="color:#7c8ba1;font-size:12.5px;margin-top:6px">例如「现在车况怎么样」「下次该保养什么」</div>'
-        + '</div></div>';
-    }
+    if (!list.length && ready()) html += welcomeHtml();
     listEl.innerHTML = html;
     toBottom(true);
+  }
+
+  var SUGG = [
+    '认识AI车管家，让我用车更省心',
+    '我的车现在车况怎么样？',
+    '下次该保养什么？大概要多少钱？',
+    '我这个月用车花了多少钱？'
+  ];
+  function welcomeHtml() {
+    var ava = '<div class="ai-wl-ava"><svg viewBox="0 0 24 24" aria-hidden="true">'
+      + '<rect x="4.5" y="6" width="15" height="12" rx="4.5"/>'
+      + '<circle cx="9.2" cy="11.5" r="1.15" fill="#5b6cf0" stroke="none"/>'
+      + '<circle cx="14.8" cy="11.5" r="1.15" fill="#5b6cf0" stroke="none"/>'
+      + '<path d="M9.5 15h5"/><path d="M7 6V4.6A1.6 1.6 0 0 1 8.6 3h6.8A1.6 1.6 0 0 1 17 4.6V6"/>'
+      + '</svg></div>';
+    return '<div class="ai-welcome">' + ava
+      + '<h3>嗨！我是AI车管家</h3>'
+      + '<p>帮你解决车辆故障难题，保养维修避坑，全面分析车况，有任何车辆问题都能问我！</p>'
+      + '<div class="ai-wl-h">✨ 你可以这样问</div>'
+      + '<div class="ai-sugg">' + SUGG.map(function (q) {
+        return '<button onclick="ccAiAsk(' + JSON.stringify(q).replace(/"/g, '&quot;') + ')">' + esc(q)
+          + '<span class="arr">→</span></button>';
+      }).join('') + '</div></div>';
   }
 
   function onboardHtml() {
@@ -1110,7 +1276,10 @@
 
     var history = msgs().slice(-8).filter(function (m) { return m.role === 'user' || (m.role === 'assistant' && m.content); })
       .map(function (m) { return { role: m.role, content: String(m.content || '').slice(0, 2000) }; });
-    history = [{ role: 'system', content: SYSTEM }, { role: 'system', content: 'DATA=' + snapText() }].concat(history);
+    history = [{ role: 'system', content: SYSTEM }]
+      .concat(cfg().useCar === false ? [] : [{ role: 'system', content: 'DATA=' + snapText() }])
+      .concat(msgs().slice(-8).filter(function (m) { return m.role === 'user' || (m.role === 'assistant' && m.content); })
+        .map(function (m) { return { role: m.role, content: String(m.content || '').slice(0, 2000) }; }));
 
     if (sendBtn) sendBtn.disabled = true;
     var lastPaint = 0;
@@ -1169,6 +1338,7 @@
     holdCancel = false;
     closeVoiceOverlay();
     if (micEl) micEl.classList.remove('hold');
+    if (holdEl) holdEl.classList.remove('rec');
   }
 
   function openVoiceOverlay() {
@@ -1208,16 +1378,23 @@
     if (msg) toastMsg(msg);
   }
 
+  var lastHoldTs = 0;
+
   function startHold(e) {
     if (!PAGE || holdOn) return;
     if (!ready()) { openCfgSheet(); return; }
     e.preventDefault();
     holdOn = true;
     holdCancel = false;
+    lastHoldTs = Date.now();
     var gen = ++voiceGen;
     if (micEl) micEl.classList.add('hold');
+    if (holdEl) holdEl.classList.add('rec');
     openVoiceOverlay();
-    try { if (micEl && micEl.setPointerCapture) micEl.setPointerCapture(e.pointerId); } catch (err) { }
+    try {
+      var src = e.target && e.target.closest ? (e.target.closest('.ai-mic') || e.target.closest('.ai-hold') || e.target) : e.target;
+      if (src && src.setPointerCapture) src.setPointerCapture(e.pointerId);
+    } catch (err) { }
 
     if (window.__ccNative) {
       try { window.__ccNative({ type: 'aiVoiceStart' }); } catch (err) { abortHold('语音不可用'); }
@@ -1250,7 +1427,8 @@
     var cancel = false;
     try {
       var y = (typeof e.clientY === 'number') ? e.clientY : 0;
-      var r = micEl ? micEl.getBoundingClientRect() : null;
+      var src = document.querySelector('.ai-mic.hold') || (holdEl && holdEl.classList.contains('rec') ? holdEl : null) || micEl;
+      var r = src ? src.getBoundingClientRect() : null;
       cancel = !!(r && y < r.top - 30);
     } catch (err) { }
     if (cancel !== holdCancel) {
@@ -1466,6 +1644,10 @@
   window.ccAiSkip = skipOne;
   window.ccAiOpenCfg = openCfgSheet;
   window.ccAiCloseCfg = closeCfgSheet;
+  window.ccAiCall = callAI;          /* 供 cc-srv.js 等模块复用 */
+  window.ccAiReady = ready;
+  window.ccAiSnapText = snapText;
+  window.ccAiVoiceMode = function (on) { if (typeof on === 'boolean') setVoiceMode(on); return voiceMode(); };
   window.ccAiSnap = snap;          /* 调试用 */
   window.ccAiLocal = localCheck;   /* 调试用 */
 
