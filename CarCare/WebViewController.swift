@@ -4,6 +4,7 @@ import UserNotifications
 import Speech
 import AVFoundation
 import PhotosUI
+import CoreLocation
 
 /// 车管家 iOS 版：原生外壳 + WKWebView（内置同一套页面）+ 原生能力桥接
 final class WebViewController: UIViewController {
@@ -562,6 +563,20 @@ extension WebViewController: WKScriptMessageHandler {
             // 拍照问AI / 报告解读：拍照或从相册选图，压缩后回传网页
             presentImagePicker()
 
+        case "httpGet":
+            // 公开接口（油价等）由原生代发，绕过 WebView 的跨域限制
+            nativeHttpGet(url: body["url"] as? String ?? "", cb: body["cb"] as? String ?? "")
+
+        case "getLocation":
+            // 定位附近加油站
+            requestNativeLocation()
+
+        case "openUrl":
+            // 打开外部链接（如高德地图查看附近加油站挂牌价）
+            if let s = body["url"] as? String, let u = URL(string: s) {
+                UIApplication.shared.open(u)
+            }
+
         default:
             break
         }
@@ -762,5 +777,91 @@ extension WebViewController: WKUIDelegate {
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         }
         return nil
+    }
+}
+
+// MARK: - 通用 GET（油价等公开接口）
+
+extension WebViewController {
+
+    /// WebView 直连第三方接口会被 ATS/跨域拦住，这里用 URLSession 代发，结果回填给网页的回调函数
+    func nativeHttpGet(url: String, cb: String) {
+        guard !cb.isEmpty, let u = URL(string: url) else { return }
+        var req = URLRequest(url: u)
+        req.timeoutInterval = 12
+        req.setValue("CheGuanJia/2.7 (iOS)", forHTTPHeaderField: "User-Agent")
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
+            let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                guard let arr = try? JSONSerialization.data(withJSONObject: [body]),
+                      let json = String(data: arr, encoding: .utf8) else { return }
+                self.evaluateJS("\(cb) && \(cb)(\(json))")
+            }
+        }.resume()
+    }
+
+    func requestNativeLocation() {
+        CCLocationFetcher.shared.fetch { [weak self] loc in
+            guard let self = self else { return }
+            if let c = loc {
+                let lat = String(format: "%.5f", c.coordinate.latitude)
+                let lon = String(format: "%.5f", c.coordinate.longitude)
+                self.evaluateJS("window.ccGeoResult && window.ccGeoResult({lat://(lat),lon://(lon)})")
+            } else {
+                self.evaluateJS("window.ccGeoResult && window.ccGeoResult(null)")
+            }
+        }
+    }
+}
+
+/// 单次定位：只要一个坐标，拿到或失败都立刻回调
+final class CCLocationFetcher: NSObject, CLLocationManagerDelegate {
+
+    static let shared = CCLocationFetcher()
+    private let lm = CLLocationManager()
+    private var done: ((CLLocation?) -> Void)?
+
+    override private init() {
+        super.init()
+        lm.delegate = self
+        lm.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    }
+
+    func fetch(_ cb: @escaping (CLLocation?) -> Void) {
+        done = cb
+        switch lm.authorizationStatus {
+        case .notDetermined:
+            lm.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            lm.requestLocation()
+        default:
+            finish(nil)
+        }
+    }
+
+    private func finish(_ loc: CLLocation?) {
+        let cb = done
+        done = nil
+        cb?(loc)
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            if done != nil { manager.requestLocation() }
+        case .denied, .restricted:
+            finish(nil)
+        default:
+            break
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        finish(locations.first)
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        finish(nil)
     }
 }

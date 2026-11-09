@@ -107,6 +107,18 @@
       + 'font-weight:700;color:#41536b}'
       + '.srv-seg button.on{background:linear-gradient(135deg,#0a84ff,#3aa0ff);border-color:transparent;color:#fff}'
       + '.srv-hint{font-size:11.5px;color:#7c8ba1;line-height:1.55;margin-top:6px;padding-left:2px}'
+      + '.srv-btnrow{display:flex;gap:8px}'
+      + '.srv-btnrow .srv-btn{flex:1;margin-top:0}'
+      + '.srv-loc{flex:0 0 auto;padding:0 14px;border-radius:14px;border:1px solid #cfdaea;background:#fff;color:#1d4ed8;font-size:13.5px;font-weight:700;cursor:pointer}'
+      + '.srv-loc:disabled{opacity:.5}'
+      + '.oil-head{font-size:14px;font-weight:800;color:#1b2a3d;margin-bottom:2px}'
+      + '.oil-row{display:flex;align-items:baseline;gap:10px;padding:9px 2px;border-bottom:1px dashed #e3ebf5}'
+      + '.oil-row b{font-size:13.5px;color:#41536b;flex:1;font-weight:700}'
+      + '.oil-p{font-size:17px;font-weight:800;color:#1b2a3d}'
+      + '.oil-p i{font-style:normal;font-size:11px;color:#8a99ad;margin-left:3px;font-weight:600}'
+      + '.oil-upd,.oil-note{font-size:11.5px;color:#7c8ba1;line-height:1.55;margin-top:8px}'
+      + '.srv-loading{padding:14px 0;text-align:center;color:#5a6d86;font-size:13.5px}'
+      + '.srv-note{padding:6px 0;color:#41536b;font-size:13px;line-height:1.6}'
       + '.srv-btn{width:100%;padding:12px;border-radius:14px;border:0;font-size:15.5px;font-weight:800;color:#fff;'
       + 'background:linear-gradient(135deg,#0a84ff,#2f9bff);margin-top:14px;box-shadow:0 8px 18px -8px rgba(10,110,230,.55)}'
       + '.srv-btn:disabled{opacity:.55}'
@@ -291,14 +303,87 @@
   var CITIES = ['北京', '上海', '广州', '深圳', '杭州', '成都', '重庆', '武汉', '南京', '西安', '苏州', '天津',
     '郑州', '长沙', '东莞', '佛山', '青岛', '济南', '沈阳', '大连', '昆明', '贵阳', '南宁', '福州', '厦门',
     '合肥', '无锡', '宁波', '温州', '石家庄', '哈尔滨', '长春', '南昌', '太原', '兰州', '乌鲁木齐', '海口'];
+  var CITY_PROV = {
+    '北京': '北京', '上海': '上海', '重庆': '重庆', '天津': '天津',
+    '广州': '广东', '深圳': '广东', '珠海': '广东', '东莞': '广东', '佛山': '广东', '中山': '广东', '惠州': '广东', '汕头': '广东', '湛江': '广东', '江门': '广东', '肇庆': '广东',
+    '杭州': '浙江', '宁波': '浙江', '温州': '浙江', '嘉兴': '浙江', '绍兴': '浙江', '金华': '浙江', '台州': '浙江', '湖州': '浙江',
+    '南京': '江苏', '苏州': '江苏', '无锡': '江苏', '常州': '江苏', '南通': '江苏', '徐州': '江苏', '扬州': '江苏', '盐城': '江苏', '镇江': '江苏',
+    '成都': '四川', '绵阳': '四川', '德阳': '四川', '宜宾': '四川', '泸州': '四川', '南充': '四川', '乐山': '四川', '自贡': '四川',
+    '武汉': '湖北', '宜昌': '湖北', '襄阳': '湖北', '郑州': '河南', '洛阳': '河南', '开封': '河南', '新乡': '河南',
+    '长沙': '湖南', '株洲': '湖南', '湘潭': '湖南', '衡阳': '湖南', '青岛': '山东', '济南': '山东', '烟台': '山东', '潍坊': '山东', '临沂': '山东',
+    '沈阳': '辽宁', '大连': '辽宁', '鞍山': '辽宁', '长春': '吉林', '吉林': '吉林', '哈尔滨': '黑龙江', '大庆': '黑龙江',
+    '石家庄': '河北', '保定': '河北', '唐山': '河北', '廊坊': '河北', '太原': '山西', '大同': '山西',
+    '西安': '陕西', '咸阳': '陕西', '宝鸡': '陕西', '兰州': '甘肃', '西宁': '青海', '银川': '宁夏', '乌鲁木齐': '新疆', '呼和浩特': '内蒙古', '包头': '内蒙古',
+    '昆明': '云南', '贵阳': '贵州', '南宁': '广西', '桂林': '广西', '柳州': '广西', '海口': '海南', '三亚': '海南',
+    '合肥': '安徽', '芜湖': '安徽', '福州': '福建', '厦门': '福建', '泉州': '福建', '南昌': '江西', '赣州': '江西', '拉萨': '西藏'
+  };
+  var PROV_LIST = ['北京', '上海', '天津', '重庆', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南', '湖北', '湖南', '广东', '广西', '海南', '四川', '贵州', '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆'];
+
+  /* 原生桥 httpGet：App 内走原生请求（无跨域限制），网页版走 fetch，失败由调用方兜底 */
+  var _httpSeq = 0;
+  function httpGet(url, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      function finish(ok, body) { if (done) return; done = true; ok ? resolve(body) : reject(new Error(body || 'fail')); }
+      if (window.__ccNative) {
+        var cb = '__ccHttp' + (++_httpSeq);
+        window[cb] = function (body) { try { delete window[cb]; } catch (e) { window[cb] = undefined; } finish(!!body, body); };
+        window.__ccNative({ type: 'httpGet', url: url, cb: cb });
+        setTimeout(function () { if (window[cb]) { try { delete window[cb]; } catch (e) { window[cb] = undefined; } finish(false, 'timeout'); } }, timeoutMs || 12000);
+        return;
+      }
+      var t = setTimeout(function () { finish(false, 'timeout'); }, timeoutMs || 12000);
+      fetch(url).then(function (r) { return r.text(); }).then(function (t2) { clearTimeout(t); finish(true, t2); },
+        function (e) { clearTimeout(t); finish(false, e && e.message); });
+    });
+  }
+  /* 定位：App 内走原生定位，浏览器走 Geolocation API */
+  function nativeLocation(timeoutMs) {
+    return new Promise(function (resolve) {
+      var done = false;
+      function finish(v) { if (done) return; done = true; resolve(v); }
+      if (window.__ccNative) {
+        window.ccGeoResult = finish;
+        window.__ccNative({ type: 'getLocation' });
+        setTimeout(function () { finish(null); }, timeoutMs || 12000);
+        return;
+      }
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (p) { finish({ lat: p.coords.latitude, lon: p.coords.longitude }); },
+          function () { finish(null); }, { timeout: timeoutMs || 10000 });
+        return;
+      }
+      finish(null);
+    });
+  }
+  function parseOilJSON(text) {
+    try { var d = JSON.parse(text); if (Object.prototype.toString.call(d) === '[object Array]' && d[0] && d[0].price_92) return d[0]; } catch (e) { }
+    return null;
+  }
+  function oilRowsHTML(d, prov) {
+    function row(label, price, chg) {
+      var tag = chg > 0 ? '<span style="color:#d9480f;font-weight:700">↑' + Number(chg).toFixed(2) + '</span>'
+        : chg < 0 ? '<span style="color:#2b8a3e;font-weight:700">↓' + Math.abs(Number(chg)).toFixed(2) + '</span>'
+        : '<span style="color:#8a99ad">持平</span>';
+      return '<div class="oil-row"><b>' + label + '</b><span class="oil-p">' + Number(price).toFixed(2) + '<i>元/升</i></span>' + tag + '</div>';
+    }
+    var upd = String(d.update_time || '').slice(0, 10);
+    return '<div class="oil-head">' + esc(prov) + ' · 最新油价（最近一次调价）</div>'
+      + row('92号汽油', d.price_92, d.change_92)
+      + row('95号汽油', d.price_95, d.change_95)
+      + (d.price_98 ? row('98号汽油', d.price_98, d.change_98) : '')
+      + (d.price_89 ? row('89号汽油', d.price_89, d.change_89) : '')
+      + row('0号柴油', d.price_0, d.change_0)
+      + (upd ? '<div class="oil-upd">数据更新：' + upd + '（国家调价窗口生效价）</div>' : '');
+  }
   function openOil() {
     var inner = '<div class="srv-frow"><label>选择城市</label><div class="srv-seg" id="oilCitySeg">'
       + CITIES.slice(0, 12).map(function (c, i) { return '<button data-c="' + c + '"' + (i === 0 ? ' class="on"' : '') + '>' + c + '</button>'; }).join('')
       + '</div></div>'
       + '<div class="srv-frow"><input id="oilCityIn" placeholder="或直接输入城市名，如：珠海"></div>'
-      + '<button class="srv-btn" id="oilGo">查询油价</button>'
+      + '<div class="srv-btnrow"><button class="srv-btn" id="oilGo">查询油价</button><button class="srv-loc" id="oilLoc">📍 定位附近加油站</button></div>'
       + '<div class="srv-out" id="oilOut" style="display:none"></div>'
-      + '<div class="srv-tip">油价数据由大模型根据其知识库给出，可能不是最新调价，仅供出行参考；精确价格以当地加油站为准。</div>';
+      + '<div class="srv-tip">油价来自公开调价数据，为国家发改委最近一次调价后的指导价，各加油站现场挂牌与优惠可能略有不同；附近加油站实时挂牌价可在高德地图中查看。</div>';
     var ov = sheet('srvOil', '城市油价', inner);
     var cur = CITIES[0];
     ov.querySelector('#oilCitySeg').addEventListener('click', function (e) {
@@ -307,14 +392,56 @@
       b.classList.add('on'); cur = b.getAttribute('data-c');
       ov.querySelector('#oilCityIn').value = '';
     });
-    var out = ov.querySelector('#oilOut'), btn = ov.querySelector('#oilGo');
-    btn.onclick = function () {
-      var city = (ov.querySelector('#oilCityIn').value || '').trim() || cur;
-      out.style.display = '';
+    var out = ov.querySelector('#oilOut'), btn = ov.querySelector('#oilGo'), loc = ov.querySelector('#oilLoc');
+    function aiFallback(city) {
       aiRun(out, [
         { role: 'system', content: '你是油价查询助手。基于你的知识回答，明确说明数据可能滞后，不做编造。回答用简洁表格+两行提示。' },
         { role: 'user', content: '给出' + city + '当前 92号、95号、98号汽油和 0号柴油 的参考零售价（元/升），并注明信息时效。' }
       ], btn);
+    }
+    function queryProv(prov) {
+      out.style.display = '';
+      out.innerHTML = '<div class="srv-loading">正在获取 ' + esc(prov) + ' 最新油价…</div>';
+      httpGet('https://www.cunyuapi.top/oil_price?province=' + encodeURIComponent(prov), 10000)
+        .then(function (t) {
+          var d = parseOilJSON(t);
+          if (!d) throw new Error('bad');
+          out.innerHTML = oilRowsHTML(d, prov)
+            + '<div class="oil-note">92号按指导价，各站实际挂牌有每升几分的差异；想看附近加油站的实时挂牌价和优惠，点「定位附近加油站」。</div>';
+        })
+        .catch(function () { aiFallback(prov); });
+    }
+    btn.onclick = function () {
+      var city = (ov.querySelector('#oilCityIn').value || '').trim() || cur;
+      var prov = CITY_PROV[city];
+      if (!prov) { aiFallback(city); return; }
+      queryProv(prov);
+    };
+    loc.onclick = function () {
+      var old = loc.textContent;
+      loc.disabled = true; loc.textContent = '定位中…';
+      nativeLocation().then(function (pos) {
+        loc.disabled = false; loc.textContent = old;
+        if (!pos) { toastMsg('定位失败，可以手动选城市查油价'); return; }
+        var amap = 'https://uri.amap.com/search?keyword=' + encodeURIComponent('加油站')
+          + '&center=' + pos.lon + ',' + pos.lat + '&src=cheguanjia&callnative=1';
+        if (window.__ccNative) { window.__ccNative({ type: 'openUrl', url: amap }); }
+        else { window.open(amap, '_blank'); }
+        out.style.display = '';
+        out.innerHTML = '<div class="srv-loading">已打开地图查看附近加油站挂牌价，正在识别你所在的省份查油价…</div>';
+        httpGet('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + pos.lat + '&lon=' + pos.lon + '&accept-language=zh-CN', 8000)
+          .then(function (t) {
+            var j = null; try { j = JSON.parse(t); } catch (e) { }
+            var st = (j && j.address && (j.address.state || j.address.province || '')) || '';
+            var prov = '';
+            for (var i = 0; i < PROV_LIST.length; i++) { if (st.indexOf(PROV_LIST[i]) >= 0) { prov = PROV_LIST[i]; break; } }
+            if (prov) { queryProv(prov); }
+            else { out.innerHTML = '<div class="srv-note">地图已打开。所在省份没识别出来，选个城市或输入城市名即可查本省油价。</div>'; }
+          })
+          .catch(function () {
+            out.innerHTML = '<div class="srv-note">地图已打开，可查看附近加油站实时挂牌价。本省油价请选城市后查询。</div>';
+          });
+      });
     };
   }
 
