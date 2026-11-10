@@ -144,6 +144,7 @@
       + '.st-big em{font-style:normal;font-size:10px;font-weight:700;color:#8a99ad;margin-right:3px}'
       + '.st-big i{font-style:normal;font-size:10.5px;font-weight:700}'
       + '.st-big-no{font-size:12px}'
+      + '.st-big-chg{color:#0a84ff}'
       + '.st-after{font-size:11px;font-weight:800;color:#1d7a3c;background:#e9f7ee;border-radius:6px;padding:1px 7px;white-space:nowrap}'
       + '.oil-src{color:#a9b6c8}'
       + '.oil-fallback{font-size:12.5px;color:#7c8ba1;line-height:1.6;margin:6px 0 8px}'
@@ -229,7 +230,7 @@
   };
 
   var FEATURES = [
-    { id: 'oil', g: 'srv-g1', ic: 'oil', t: '城市油价', d: '一键速览城市油价，优惠尽在掌握', fn: openOil },
+    { id: 'oil', g: 'srv-g1', ic: 'oil', t: '城市油价', d: '附近油站与充电站，油价电价一屏看', fn: openOil },
     { id: 'rem', g: 'srv-g2', ic: 'bell', t: '智能提醒', d: '车检年检保险不遗忘', fn: openRemind },
     { id: 'report', g: 'srv-g3', ic: 'doc', t: '报告解读', d: '专业解读，科学分析，智慧养护', fn: openReport },
     { id: 'pick', g: 'srv-g4', ic: 'pick', t: 'AI选车', d: 'AI帮您选到心仪的车', fn: openPick, tag: '+100' },
@@ -800,18 +801,18 @@
     return k || AMAP_KEY_BUILTIN;
   }
   function saveAmapKey(k) { try { localStorage.setItem(AMAP_LS, k || ''); } catch (e) { } }
-  /* 附近油站结果缓存：同网格 30 分钟内复用，帮高德周边搜索省额度（个人认证 100 次/日） */
+  /* 附近油站/充电站结果缓存：同网格同模式 30 分钟内复用，帮高德周边搜索省额度（个人认证 100 次/日） */
   var NEAR_TTL = 30 * 60 * 1000;
-  function nearCk(lat, lon) { return 'cc_near_' + Number(lat).toFixed(2) + '_' + Number(lon).toFixed(2); }
-  function nearCacheGet(lat, lon) {
+  function nearCk(lat, lon, mode) { return 'cc_near_' + (mode === 'chg' ? 'chg_' : '') + Number(lat).toFixed(2) + '_' + Number(lon).toFixed(2); }
+  function nearCacheGet(lat, lon, mode) {
     try {
-      var o = JSON.parse(localStorage.getItem(nearCk(lat, lon)) || 'null');
+      var o = JSON.parse(localStorage.getItem(nearCk(lat, lon, mode)) || 'null');
       if (o && o.t && (Date.now() - o.t) < NEAR_TTL && o.list && o.list.length >= 8) return o;
     } catch (e) { }
     return null;
   }
-  function nearCacheSet(lat, lon, src, list, r) {
-    try { localStorage.setItem(nearCk(lat, lon), JSON.stringify({ t: Date.now(), src: src || '', r: r || 25, list: (list || []).slice(0, 60) })); } catch (e) { }
+  function nearCacheSet(lat, lon, src, list, r, mode) {
+    try { localStorage.setItem(nearCk(lat, lon, mode), JSON.stringify({ t: Date.now(), src: src || '', r: r || 25, list: (list || []).slice(0, 60) })); } catch (e) { }
   }
   function haversine(a1, o1, a2, o2) {
     var R = 6371, r = Math.PI / 180;
@@ -839,23 +840,48 @@
     if (/中海油|海洋石油/.test(s)) return { k: 'cnooc', t: '海油', c: '#0057a7' };
     return { k: 'other', t: '油站', c: '#2f6fdd' };
   }
-  function amapCross(lat, lon, key) {
+  /* 充电运营商识别（高德充电站 POI 名称里通常带运营商） */
+  function chgBrandOf(name) {
+    var s = String(name || '');
+    if (/国家电网|国网/.test(s)) return { k: 'sgcc', t: '国网', c: '#1e6fd9' };
+    if (/南方电网|南网/.test(s)) return { k: 'csg', t: '南网', c: '#0f9d58' };
+    if (/特来电/.test(s)) return { k: 'teld', t: '特来电', c: '#00a3e0' };
+    if (/星星充电/.test(s)) return { k: 'star', t: '星星', c: '#f5a623' };
+    if (/小桔|滴滴/.test(s)) return { k: 'didi', t: '滴滴', c: '#ff7a00' };
+    if (/蔚来/.test(s)) return { k: 'nio', t: '蔚来', c: '#00b3a4' };
+    if (/特斯拉|tesla/i.test(s)) return { k: 'tesla', t: '特斯拉', c: '#e82127' };
+    if (/云快充/.test(s)) return { k: 'ykc', t: '云快充', c: '#6f57d9' };
+    if (/小鹏/.test(s)) return { k: 'xpeng', t: '小鹏', c: '#00c2b2' };
+    return { k: 'other', t: '充电', c: '#2f6fdd' };
+  }
+  /* 综合电价（电费+服务费）常见水平估算，元/度；谷电/峰电、城市间会有差异 */
+  var CHG_PRICE = { sgcc: 1.20, csg: 1.15, teld: 1.10, star: 1.00, didi: 0.95, nio: 1.30, tesla: 1.80, ykc: 1.00, xpeng: 1.20, other: 1.00 };
+  function chgTagOf(name) {
+    var s = String(name || '');
+    if (/超充/.test(s)) return '超充';
+    if (/快充/.test(s)) return '快充';
+    if (/慢充|小区|居民|地库/.test(s)) return '慢充';
+    return '充电';
+  }
+  function amapCross(lat, lon, key, mode) {
     var offs = [[0.14, 0], [-0.14, 0], [0, 0.15], [0, -0.15]];
     var p = Promise.resolve([]);
     offs.forEach(function (o, i) {
       p = p.then(function (acc) {
         return new Promise(function (res) { setTimeout(res, i ? 300 : 0); })
-          .then(function () { return amapNearby(lat + o[0], lon + o[1], key, 12000); })
+          .then(function () { return amapNearby(lat + o[0], lon + o[1], key, 12000, mode); })
           .then(function (l) { return acc.concat(l); }, function () { return acc; });
       });
     });
     return p;
   }
-  function amapNearby(lat, lon, key, radius) {
+  function amapNearby(lat, lon, key, radius, mode) {
     var R = radius || 5000;
+    var isChg = mode === 'chg';
+    var kw = isChg ? '充电站' : '加油站';
     function page(p, retry) {
       var u = 'https://restapi.amap.com/v3/place/around?key=' + encodeURIComponent(key)
-        + '&location=' + lon + ',' + lat + '&keywords=' + encodeURIComponent('加油站')
+        + '&location=' + lon + ',' + lat + '&keywords=' + encodeURIComponent(kw)
         + '&radius=' + R + '&offset=25&page=' + p + '&extensions=all&sortrule=distance';
       return httpGet(u, 9000).then(function (t) {
         var j = JSON.parse(t);
@@ -868,17 +894,27 @@
           }
           var e = new Error(amapErrText(j && j.info, j && j.infocode)); e.amap = true; throw e;
         }
-        return (j.pois || []).map(function (q) {
+        return (j.pois || []).filter(function (q) {
+          // 充电站：剔除「内部/专用」站（不对外开放）
+          if (isChg && (/内部|专用/.test(q.name || '') || String(q.typecode) === '011103')) return false;
+          return true;
+        }).map(function (q) {
           var lc = String(q.location || '').split(',');
           var addr = q.address;
           if (addr && typeof addr === 'object') addr = addr.length ? addr.join('') : '';
           var ph = (q.photos && q.photos[0] && q.photos[0].url) || '';
-          return {
-            name: q.name || '加油站', addr: addr || '',
+          var out = {
+            name: q.name || kw, addr: addr || '',
             km: Number(q.distance) ? Number(q.distance) / 1000 : haversine(lat, lon, Number(lc[1]), Number(lc[0])),
             lat: Number(lc[1]), lon: Number(lc[0]),
-            brand: brandOf(q.name), photo: ph
+            brand: isChg ? chgBrandOf(q.name) : brandOf(q.name), photo: ph
           };
+          if (isChg) {
+            out.ctag = chgTagOf(q.name);
+            var be = q.biz_ext || {};
+            out.open = (be.open_time && typeof be.open_time === 'string') ? be.open_time : (be.opentime2 && typeof be.opentime2 === 'string' ? be.opentime2 : '');
+          }
+          return out;
         });
       });
     }
@@ -936,12 +972,18 @@
       + '<span class="oil-loc-t" id="oilLocTxt">正在定位…</span>'
       + '<button class="srv-loc" id="oilLoc">重新定位</button></div>'
       + '<div id="oilNearCtl" style="display:none">'
-      + '<div class="oil-sec">附近加油站 <i id="oilNearTip">直线距离 · 排序由近到远</i></div>'
-      + '<div class="srv-frow"><div class="srv-seg srv-seg-sm" id="oilFuelSeg">'
+      + '<div class="srv-frow"><div class="srv-seg srv-seg-sm" id="oilModeSeg">'
+      + '<button data-m="fuel" class="on">⛽ 加油站</button><button data-m="chg">⚡ 充电站</button>'
+      + '</div></div>'
+      + '<div class="oil-sec"><span id="oilNearTitle">附近加油站</span> <i id="oilNearTip">直线距离 · 排序由近到远</i></div>'
+      + '<div class="srv-frow" id="oilFuelRow"><div class="srv-seg srv-seg-sm" id="oilFuelSeg">'
       + [['92','92#'],['95','95#'],['98','98#'],['0','0#柴油']].map(function (f, i) { return '<button data-f="' + f[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + f[1] + '</button>'; }).join('')
       + '</div></div>'
-      + '<div class="srv-frow"><div class="srv-seg srv-seg-sm" id="oilBrandSeg">'
+      + '<div class="srv-frow" id="oilBrandRow"><div class="srv-seg srv-seg-sm" id="oilBrandSeg">'
       + [['全部','全部品牌'],['petro','石油'],['sinopec','石化'],['bp','BP'],['shell','壳牌'],['cnooc','海油'],['gas','加气'],['other','其他']].map(function (f, i) { return '<button data-b="' + f[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + f[1] + '</button>'; }).join('')
+      + '</div></div>'
+      + '<div class="srv-frow" id="oilChgRow" style="display:none"><div class="srv-seg srv-seg-sm" id="oilChgSeg">'
+      + [['全部','全部'],['超充','超充'],['快充','快充'],['慢充','慢充']].map(function (f, i) { return '<button data-t="' + f[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + f[1] + '</button>'; }).join('')
       + '</div></div></div>'
       + '<div id="oilNear"><div class="srv-loading">正在查找附近加油站…</div></div>'
       + '<div id="oilProv"></div>'
@@ -955,7 +997,7 @@
       + '<div class="oil-keyrow"><a href="javascript:;" id="oilKeyToggle">' + (AMAP_KEY_BUILTIN ? '已内置高德数据源，也可换成自己的 Key' : '填高德 Key，直接在本页列出附近加油站') + '</a>'
       + '<div id="oilKeyBox" style="display:none"><input id="oilKeyIn" placeholder="高德 Web 服务 Key（免费申请，仅存本机）">'
       + '<button class="srv-loc" id="oilKeySave">保存</button></div></div>'
-      + '<div class="srv-tip">省油价为国家发改委最近一次调价后的指导价，实时准确；各加油站挂牌价与优惠以后者为准，点站点可在高德查看该站实时价。</div>';
+      + '<div class="srv-tip">省油价为国家发改委最近一次调价后的指导价，实时准确；各加油站挂牌价与优惠以后者为准。充电电价没有公开逐站数据，按运营商常见「电费+服务费」水平估算，各站按时段/会员浮动。点站点可在高德查看该站实时价格。</div>';
     var ov = sheet('srvOil', '城市油价', inner);
     var out = ov.querySelector('#oilOut');
     var provBox = ov.querySelector('#oilProv');
@@ -966,6 +1008,7 @@
     var lastPos = null, last92 = null, last95 = null;
     var lastOil = {}, lastList = null, lastSrc = '', lastR = 5;
     var fuelSel = '92', brandSel = '全部';
+    var nearMode = 'fuel', chgSel = '全部';
 
     ov.querySelector('#oilCitySeg').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
@@ -982,6 +1025,29 @@
       var b = e.target.closest('button'); if (!b) return;
       ov.querySelectorAll('#oilBrandSeg button').forEach(function (x) { x.classList.remove('on'); });
       b.classList.add('on'); brandSel = b.getAttribute('data-b'); renderList();
+    });
+    ov.querySelector('#oilChgSeg').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      ov.querySelectorAll('#oilChgSeg button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on'); chgSel = b.getAttribute('data-t'); renderList();
+    });
+    /* 加油站 / 充电站 切换（同一套定位和缓存，按需拉取另一类，省高德额度） */
+    ov.querySelector('#oilModeSeg').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var m = b.getAttribute('data-m');
+      if (m === nearMode) return;
+      ov.querySelectorAll('#oilModeSeg button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      nearMode = m;
+      ov.querySelector('#oilFuelRow').style.display = m === 'fuel' ? '' : 'none';
+      ov.querySelector('#oilBrandRow').style.display = m === 'fuel' ? '' : 'none';
+      ov.querySelector('#oilChgRow').style.display = m === 'chg' ? '' : 'none';
+      ov.querySelector('#oilNearTitle').textContent = m === 'chg' ? '附近充电站' : '附近加油站';
+      lastList = null;
+      nearBusy = false;
+      nearBox.innerHTML = '<div class="srv-loading">正在查找附近' + (m === 'chg' ? '充电站' : '加油站') + '…</div>';
+      if (lastPos) renderNear(lastPos);
+      else nearTip();
     });
 
     function aiFallback(city) {
@@ -1010,6 +1076,7 @@
     }
     var DISC = { sinopec: 0.55, petro: 0.40, cnooc: 0.55, bp: 0.55, shell: 0.75, other: 0.50, gas: 0 };
     function stationRowsHTML(list, src) {
+      if (nearMode === 'chg') return chgRowsHTML(list, src);
       return list.map(function (st) {
         var br = st.brand || brandOf(st.name);
         var price = fuelPrice(fuelSel);
@@ -1039,11 +1106,45 @@
         + '<div class="oil-note oil-src">右侧大字 = 省发改委指导价；「优惠后约」按各品牌在高德的常见优惠幅度估算（两桶油约降 4~5 毛、壳牌约降 7 毛、民营/外资约降 5 毛），每站实际略有差异，点站点可跳高德查看该站实时优惠后价。</div>'
         + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
     }
+    function chgRowsHTML(list, src) {
+      var rows = list.map(function (st) {
+        var br = st.brand || chgBrandOf(st.name);
+        var p = CHG_PRICE[br.k] || 1.00;
+        var tag = st.ctag || chgTagOf(st.name);
+        if (tag === '慢充') p = Math.min(p, 0.85);
+        else if (tag === '超充') p = p + 0.20;
+        var thumb = '<div class="st-th" style="background:' + br.c + '"><i>' + br.t + '</i>'
+          + (st.photo ? '<img src="' + esc(st.photo) + '" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">' : '')
+          + '</div>';
+        return '<div class="st-row" data-lat="' + st.lat + '" data-lon="' + st.lon + '" data-n="' + esc(st.name) + '">'
+          + thumb
+          + '<div class="st-mid">'
+          + '<b class="st-name">' + esc(st.name) + '</b>'
+          + '<span class="st-meta"><span class="st-km">' + fmtKm(st.km) + '</span>' + (st.addr ? ' · ' + esc(st.addr) : '') + '</span>'
+          + '</div>'
+          + '<div class="st-cost">'
+          + '<span class="st-big st-big-chg"><em>' + tag + '</em>&yen;' + p.toFixed(2) + '<i>/度</i></span>'
+          + '<span class="st-after">谷电约 &yen;' + (p * 0.62).toFixed(2) + '</span>'
+          + '</div></div>';
+      }).join('');
+      return rows
+        + (list.length < 5
+          ? '<div class="oil-fallback">周边充电站较少，已按最远 ' + lastR + ' 公里查询。点下面按钮在高德地图里看完整列表。</div>'
+            + '<button class="srv-btn" id="oilMapMore">在高德地图看更多充电站</button>'
+          : '')
+        + '<div class="oil-note oil-src">右侧大字 = 按运营商常见「电费+服务费」水平估算的综合电价（元/度），绿色为夜间谷电估算；各站按时段、会员与枪位浮动较大，点站点可跳高德查看该站实时电价。</div>'
+        + '<div class="oil-note oil-src">数据源：' + esc(src || '地图') + '</div>';
+    }
     function renderList() {
       if (!lastList) return;
-      var list = lastList.filter(function (st) { return brandSel === '全部' || (st.brand && st.brand.k === brandSel); });
+      var list;
+      if (nearMode === 'chg') {
+        list = lastList.filter(function (st) { return chgSel === '全部' || (st.ctag || chgTagOf(st.name)) === chgSel; });
+      } else {
+        list = lastList.filter(function (st) { return brandSel === '全部' || (st.brand && st.brand.k === brandSel); });
+      }
       nearBox.innerHTML = (list.length ? stationRowsHTML(list, lastSrc)
-        : '<div class="oil-fallback">没有符合筛选的油站，换个品牌试试。</div>');
+        : '<div class="oil-fallback">' + (nearMode === 'chg' ? '没有符合筛选的充电站，换个类型试试。' : '没有符合筛选的油站，换个品牌试试。') + '</div>');
       bindRows();
     }
     function nearTip() {
@@ -1052,9 +1153,10 @@
       var n = lastList ? lastList.length : 0;
       tip.textContent = '直线距离 · ' + (lastR <= 5 ? '5 公里内' : lastR + ' 公里内') + ' · 共 ' + n + ' 家';
     }
-    function fetchNear(pos, key, R) {
+    function fetchNear(pos, key, R, mode) {
       var m = R * 1000;
-      if (key) return amapNearby(pos.lat, pos.lon, key, m).then(function (l) { return { list: l, src: '高德地图' }; });
+      if (key) return amapNearby(pos.lat, pos.lon, key, m, mode).then(function (l) { return { list: l, src: '高德地图' }; });
+      if (mode === 'chg') return Promise.reject(new Error('nokey'));
       return osmNearby(pos.lat, pos.lon, m).then(function (l) { return { list: l, src: 'OpenStreetMap' }; });
     }
     function mergeList(a, b) {
@@ -1070,59 +1172,70 @@
       return out.filter(function (x) { return x.km <= 30; })
         .sort(function (p, q) { return p.km - q.km; }).slice(0, 60);
     }
-    var nearBusy = false;
+    var nearBusy = false, nearSeq = 0;
     function renderNear(pos) {
+      var mode = nearMode;
       if (nearBusy) return;
       nearBusy = true;
+      var seq = ++nearSeq;
       lastPos = pos;
       var key = amapKey();
       var ctl = ov.querySelector('#oilNearCtl');
-      var hit = nearCacheGet(pos.lat, pos.lon);
+      var label = mode === 'chg' ? '充电站' : '加油站';
+      var hit = nearCacheGet(pos.lat, pos.lon, mode);
       if (hit) {
         lastList = hit.list; lastSrc = hit.src; lastR = hit.r || 5;
         if (ctl) ctl.style.display = '';
+        nearBusy = false;
         nearTip(); renderList(); return;
       }
-      nearBox.innerHTML = '<div class="srv-loading">正在查找附近加油站…</div>';
+      if (ctl) ctl.style.display = '';
+      nearBox.innerHTML = '<div class="srv-loading">正在查找附近' + label + '…</div>';
       var note = '';
       var RADII = [25, 50];
-      fetchNear(pos, key, RADII[0]).catch(function (e) {
+      fetchNear(pos, key, RADII[0], mode).catch(function (e) {
         if (e && e.amap) note = String(e.message);
+        if (mode === 'chg') return { list: [], src: '高德地图' };
         return osmNearby(pos.lat, pos.lon, 12000).then(function (l) { return { list: l, src: 'OpenStreetMap' }; });
       }).then(function (r) {
-        // 跨市补查：高德周边搜索只返回定位点所在市的油站，把查询点向四方平移 15km 落到邻市再查，合并去重
-        var crossP = key ? amapCross(pos.lat, pos.lon, key) : Promise.resolve([]);
+        if (seq !== nearSeq) return null;
+        // 跨市补查：高德周边搜索只返回定位点所在市的站点，把查询点向四方平移 15km 落到邻市再查，合并去重
+        var crossP = key ? amapCross(pos.lat, pos.lon, key, mode) : Promise.resolve([]);
         return Promise.all([Promise.resolve(r), crossP]).then(function (arr) {
           var merged = mergeList(arr[0] && arr[0].list, arr[1] || []);
           if (merged.length) return { R: RADII[0], r: { list: merged, src: (arr[0] && arr[0].src) || '地图' } };
           return { R: RADII[0], r: r };
         });
       }).then(function (res) {
+        if (!res || seq !== nearSeq) return null;
         // 仍不足 8 家（荒野）：扩到 50 公里
         if (!(res.r && res.r.list && res.r.list.length >= 8)) {
-          return fetchNear(pos, key, RADII[1]).then(function (r2) {
+          return fetchNear(pos, key, RADII[1], mode).then(function (r2) {
+            if (seq !== nearSeq) return null;
             var merged = mergeList(res.r && res.r.list, r2.list);
             return { R: RADII[1], r: { list: merged.length ? merged : res.r.list, src: (res.r && res.r.src) || r2.src } };
           }, function () { return res; });
         }
         return res;
       }).then(function (res) {
+        if (!res || seq !== nearSeq) return;
         var r = res.r;
         if (!r || !r.list || !r.list.length) throw new Error('empty');
         lastList = r.list; lastR = res.R;
         lastSrc = r.src + (note ? '（' + note + '）' : '');
-        nearCacheSet(pos.lat, pos.lon, r.src, r.list, res.R);
+        nearCacheSet(pos.lat, pos.lon, r.src, r.list, res.R, mode);
         if (ctl) ctl.style.display = '';
         nearBusy = false;
         nearTip(); renderList();
       }).catch(function () {
+        if (seq !== nearSeq) return;
         nearBusy = false;
         lastList = null;
         if (ctl) ctl.style.display = 'none';
-        nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
-          + '<div class="oil-fallback">当前网络拿不到附近油站列表，点下面按钮在地图里看（含每站实时挂牌价与优惠）。</div>'
+        nearBox.innerHTML = '<div class="oil-sec">附近' + label + '</div>'
+          + '<div class="oil-fallback">当前网络拿不到附近' + label + '列表，点下面按钮在地图里看' + (mode === 'chg' ? '（含实时电价）' : '（含每站实时挂牌价与优惠）') + '。</div>'
           + (note ? '<div class="oil-note">' + esc(note) + '</div>' : '')
-          + '<button class="srv-btn" id="oilMap">在高德地图看附近加油站</button>';
+          + '<button class="srv-btn" id="oilMap">在高德地图看附近' + label + '</button>';
         var mb = nearBox.querySelector('#oilMap');
         if (mb) mb.onclick = function () { openAmapSearch(pos); };
       });
@@ -1141,7 +1254,8 @@
       });
     }
     function openAmapSearch(pos) {
-      var u = 'https://uri.amap.com/search?keyword=' + encodeURIComponent('加油站')
+      var kw = nearMode === 'chg' ? '充电站' : '加油站';
+      var u = 'https://uri.amap.com/search?keyword=' + encodeURIComponent(kw)
         + '&center=' + pos.lon + ',' + pos.lat + '&src=cheguanjia&callnative=1';
       if (window.__ccNative) window.__ccNative({ type: 'openUrl', url: u });
       else window.open(u, '_blank');
@@ -1174,17 +1288,17 @@
         locBtn.textContent = '重新定位';
         if (pos && pos.denied) {
           locTxt.textContent = '定位权限未开启';
-          nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
+          nearBox.innerHTML = '<div class="oil-sec">附近站点</div>'
             + '<div class="oil-fallback">定位权限被拒绝。请到手机「设置」→「车管家」→「位置」选「使用App期间」，回来再点「重新定位」。</div>';
           return;
         }
         if (!pos || pos.failed) {
           locTxt.textContent = '定位失败，可在下方选城市查油价';
-          nearBox.innerHTML = '<div class="oil-sec">附近加油站</div>'
+          nearBox.innerHTML = '<div class="oil-sec">附近站点</div>'
             + '<div class="oil-fallback">没有拿到位置。可点「重新定位」再试，或直接选下方城市查当日油价。</div>';
           return;
         }
-        locTxt.textContent = '已定位 · 附近加油站按距离排序';
+        locTxt.textContent = '已定位 · 附近油站/充电站按距离排序';
         renderNear(pos);
         detectProv(pos).then(function (prov) { if (prov) queryProv(prov, true); });
       });
