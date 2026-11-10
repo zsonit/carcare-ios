@@ -724,6 +724,7 @@
       <div class="seg" id="recSeg">
         <button class="on" type="button" data-pane="service" onclick="pickRec('service')">维保</button>
         <button type="button" data-pane="fuel" onclick="pickRec('fuel')">加油</button>
+        <button type="button" data-pane="charge" onclick="pickRec('charge')">充电</button>
         <button type="button" data-pane="cost" onclick="pickRec('cost')">费用</button>
       </div>
       <div id="recPane-service">
@@ -816,6 +817,39 @@
         </div>
       </div>
 
+      <!-- 充电 -->
+      <div id="recPane-charge" class="hidden">
+        <div class="card">
+          <h3>记一次充电</h3>
+          <div class="muted">填里程与充电量，自动算百公里电耗；勾「充满」电耗才算得准。</div>
+          <div class="grid2">
+            <div><label>日期</label><input id="chDate" type="date"></div>
+            <div><label>当前里程 (km)</label><input id="chMile" type="number" inputmode="numeric"></div>
+          </div>
+          <div class="grid2">
+            <div><label>充电量 (度/kWh)</label><input id="chKwh" type="number" inputmode="decimal" placeholder="0.00" oninput="calcChPrice()"></div>
+            <div><label>金额 (¥)</label><input id="chAmt" type="number" inputmode="decimal" placeholder="0.00" oninput="calcChPrice()"></div>
+          </div>
+          <div class="grid2">
+            <div><label>单价 (¥/度)</label><input id="chPrice" type="text" readonly value="—"></div>
+            <div><label>充电方式</label><select id="chMode"><option>家充</option><option>快充</option><option>超充</option><option>其他</option></select></div>
+          </div>
+          <label>这次充满了吗</label>
+          <div class="seg mini">
+            <button class="on" type="button" id="chFullY" onclick="setChFull(1)">充满了</button>
+            <button type="button" id="chFullN" onclick="setChFull(0)">没充满</button>
+          </div>
+          <label>充电场所</label><input id="chPlace" placeholder="如：小区地库 / 特来电 XX站">
+          <button class="btn" style="width:100%;margin-top:14px" onclick="saveCharge()">保存充电记录</button>
+          <button class="btn ghost" style="width:100%;margin-top:8px" onclick="voiceFill('charge')">🎤 语音录入</button>
+          <div class="note" id="chargeQuick"></div>
+        </div>
+        <div class="card">
+          <h3>最近充电</h3>
+          <div id="chargeList" class="rowlist"></div>
+        </div>
+      </div>
+
       <!-- 费用 -->
       <div id="recPane-cost" class="hidden">
         <div class="card">
@@ -895,6 +929,7 @@
         <button type="button" data-h="service" onclick="pickHist('service')">维保</button>
         <button type="button" data-h="repair" onclick="pickHist('repair')">维修</button>
         <button type="button" data-h="fuel" onclick="pickHist('fuel')">加油</button>
+        <button type="button" data-h="charge" onclick="pickHist('charge')">充电</button>
         <button type="button" data-h="cost" onclick="pickHist('cost')">费用</button>
       </div>
       <div id="recordList"></div>
@@ -1587,6 +1622,8 @@ function renderFinance(){
     DB.records.filter(r=>r.vehicleId===CUR&&r.cost>0).map(r=>({type:r.kind==='repair'?'维修':'维保',amount:r.cost,date:r.date}))
   ).concat(
     (DB.fuels||[]).filter(f=>f.vehicleId===CUR).map(f=>({type:'加油',amount:+f.amount||0,date:f.date}))
+  ).concat(
+    (DB.charges||[]).filter(c=>c.vehicleId===CUR).map(c=>({type:'充电',amount:+c.amount||0,date:c.date}))
   ).map(c=>c.type==='油费'?Object.assign({},c,{type:'加油'}):c);   // 手记的「油费」并入加油，避免重复分类
   const total=costs.reduce((s,c)=>s+(+c.amount||0),0);
   const now=new Date();const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');

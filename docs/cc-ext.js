@@ -22,7 +22,7 @@ function xMoney(n) { return '¥' + fmt(Math.round((+n || 0) * 100) / 100); }
 
 /* ---------- 修复老数据 ---------- */
 function xEnsureArrays() {
-  ['fuels', 'odo', 'docs', 'tires', 'tireLogs', 'parts', 'plans'].forEach(k => {
+  ['fuels', 'charges', 'odo', 'docs', 'tires', 'tireLogs', 'parts', 'plans'].forEach(k => {
     if (!Array.isArray(DB[k])) DB[k] = [];
   });
   DB.seasonCheck = DB.seasonCheck || {};
@@ -325,6 +325,110 @@ function delFuel(id) {
   if (!confirm('删除这条加油记录？')) return;
   DB.fuels = DB.fuels.filter(f => f.id !== id);
   save(); renderFuelList(); renderOilStats(); renderFinance(); renderOdo(); toast('已删除');
+}
+
+/* ============================================================================
+ * 四·五、充电与电耗（满充法：上一箱充满 → 本次充满，中间累计电量 ÷ 里程差）
+ * ========================================================================== */
+function chargeList() {
+  return (DB.charges || []).filter(c => c.vehicleId === CUR)
+    .slice().sort((a, b) => (xNum(b.mileage) - xNum(a.mileage)) || String(b.date).localeCompare(String(a.date)));
+}
+function chargeStats() {
+  const list = chargeList().slice().sort((a, b) => xNum(a.mileage) - xNum(b.mileage));
+  let prevFull = null, accK = 0, sumK = 0, sumKm = 0;
+  const segs = [];
+  list.forEach(c => {
+    if (!prevFull) { prevFull = c; accK = 0; return; }
+    accK += xNum(c.kwh);
+    if (c.full) {
+      const dist = xNum(c.mileage) - xNum(prevFull.mileage);
+      if (dist > 0 && accK > 0) {
+        const k100 = accK / dist * 100;
+        segs.push({ id: c.id, date: c.date, k100: k100 });
+        sumK += accK; sumKm += dist;
+        accK = 0;
+      }
+      prevFull = c;
+    }
+  });
+  const totalK = list.reduce((s, c) => s + xNum(c.kwh), 0);
+  const totalAmt = list.reduce((s, c) => s + xNum(c.amount), 0);
+  const kms = list.map(c => xNum(c.mileage)).filter(x => x > 0);
+  const span = kms.length > 1 ? Math.max.apply(null, kms) - Math.min.apply(null, kms) : 0;
+  const avg = sumKm > 0 ? sumK / sumKm * 100 : 0;
+  const last = segs.length ? segs[segs.length - 1].k100 : 0;
+  return {
+    segs, avg, last, totalK, totalAmt, span,
+    perKm: span > 0 ? totalAmt / span : 0,
+    priceAvg: totalK > 0 ? totalAmt / totalK : 0
+  };
+}
+function renderChargeList() {
+  const box = document.getElementById('chargeList');
+  if (!box) return;
+  const st = chargeStats();
+  const quick = document.getElementById('chargeQuick');
+  if (quick) {
+    quick.textContent = st.avg
+      ? ('历史平均 ' + st.avg.toFixed(1) + ' 度/100km　每公里电费 ' + st.perKm.toFixed(2) + ' 元')
+      : '再记 2 次「充满」就能算出百公里电耗。';
+  }
+  const list = chargeList().slice(0, 8);
+  box.innerHTML = list.length ? list.map(c => {
+    const seg = st.segs.find(s => s.id === c.id);
+    return '<div class="item"><div class="t"><span class="sp">' + esc(c.mode || '充电') + '　' + xMoney(c.amount) + '</span>'
+      + (seg ? '<span class="pill pri">' + seg.k100.toFixed(1) + ' 度/100</span>' : '')
+      + '</div>'
+      + '<div class="s">' + (c.date || '') + '　' + fmt(c.mileage) + ' km　' + xNum(c.kwh).toFixed(2) + ' 度'
+      + (c.price ? '　' + c.price + ' 元/度' : '') + (c.full ? '　充满' : '')
+      + (c.place ? '<br>' + esc(c.place) : '') + '</div>'
+      + '<div class="acts"><button class="del" onclick="delCharge(\'' + c.id + '\')">删除</button></div></div>';
+  }).join('') : '<div class="muted">还没有充电记录。</div>';
+}
+let chFull = 1;
+function setChFull(v) {
+  chFull = v;
+  const y = document.getElementById('chFullY'), n = document.getElementById('chFullN');
+  if (y) y.classList.toggle('on', v === 1);
+  if (n) n.classList.toggle('on', v === 0);
+}
+function calcChPrice() {
+  const k = xNum(document.getElementById('chKwh').value);
+  const a = xNum(document.getElementById('chAmt').value);
+  const p = document.getElementById('chPrice');
+  if (p) p.value = (k > 0 && a > 0) ? (a / k).toFixed(2) : '—';
+}
+function saveCharge() {
+  const v = curVehicle();
+  const mileage = xNum(document.getElementById('chMile').value) || xNum(v.mileage);
+  const kwh = xNum(document.getElementById('chKwh').value);
+  const amount = xNum(document.getElementById('chAmt').value);
+  if (!mileage) { toast('请填写当前里程'); return; }
+  if (!kwh || !amount) { toast('请填写充电量与金额'); return; }
+  const date = document.getElementById('chDate').value || today();
+  const rec = {
+    id: uid(), vehicleId: CUR, date, mileage, kwh, amount,
+    price: +(amount / kwh).toFixed(2),
+    full: chFull ? 1 : 0,
+    mode: document.getElementById('chMode').value,
+    place: document.getElementById('chPlace').value.trim()
+  };
+  DB.charges.unshift(rec);
+  if (mileage > xNum(v.mileage)) v.mileage = mileage;
+  addOdo(CUR, date, mileage, '充电');
+  save();
+  document.getElementById('chKwh').value = '';
+  document.getElementById('chAmt').value = '';
+  document.getElementById('chPrice').value = '—';
+  document.getElementById('chPlace').value = '';
+  renderChargeList(); renderFinance(); renderOdo(); renderExpiry(); renderCalendar();
+  toast('充电已记录');
+}
+function delCharge(id) {
+  if (!confirm('删除这条充电记录？')) return;
+  DB.charges = (DB.charges || []).filter(c => c.id !== id);
+  save(); renderChargeList(); renderFinance(); renderOdo(); toast('已删除');
 }
 
 /* 油耗分析（成本页） */
@@ -804,6 +908,16 @@ function renderHistory() {
         + '<div class="row" style="margin-top:10px"><button class="btn ghost" onclick="delFuel(\'' + f.id + '\')">删除</button></div>'
     });
   });
+  (DB.charges || []).filter(c => c.vehicleId === CUR).forEach(c => {
+    rows.push({
+      k: 'charge', d: c.date,
+      html: '<div class="rec-item"><div class="body"><div class="t">⚡ 充电 ' + xMoney(c.amount) + '</div>'
+        + '<div class="s">' + c.date + '　' + fmt(c.mileage) + ' km　' + xNum(c.kwh).toFixed(2) + ' 度'
+        + (c.price ? '　' + c.price + ' 元/度' : '') + (c.full ? '　充满' : '') + (c.mode ? '　' + esc(c.mode) : '') + '</div>'
+        + (c.place ? '<div class="s">' + esc(c.place) + '</div>' : '') + '</div></div>'
+        + '<div class="row" style="margin-top:10px"><button class="btn ghost" onclick="delCharge(\'' + c.id + '\')">删除</button></div>'
+    });
+  });
   DB.costs.filter(c => c.vehicleId === CUR).forEach(c => {
     rows.push({
       k: 'cost', d: c.date,
@@ -825,7 +939,7 @@ function renderHistory() {
 let recPane = 'service', recKind = 'service';
 function pickRec(p) {
   recPane = p;
-  ['service', 'fuel', 'cost'].forEach(k => {
+  ['service', 'fuel', 'charge', 'cost'].forEach(k => {
     const el = document.getElementById('recPane-' + k);
     if (el) el.classList.toggle('hidden', k !== p);
     const b = document.querySelector('#recSeg button[data-pane="' + k + '"]');
@@ -833,6 +947,8 @@ function pickRec(p) {
   });
   if (p === 'fuel') { if (!document.getElementById('fDate').value) document.getElementById('fDate').value = today();
     document.getElementById('fMile').value = xNum((curVehicle() || {}).mileage) || ''; renderFuelList(); }
+  if (p === 'charge') { if (!document.getElementById('chDate').value) document.getElementById('chDate').value = today();
+    document.getElementById('chMile').value = xNum((curVehicle() || {}).mileage) || ''; renderChargeList(); }
   if (p === 'cost') { if (!document.getElementById('cDate2').value) document.getElementById('cDate2').value = today(); renderCostList(); }
 }
 function setKind(k) {
@@ -1183,7 +1299,15 @@ function ccVoiceResult(text) {
   if (!s) { toast('没听清，再试一次'); return; }
   const nums = (s.match(/\d+(\.\d+)?/g) || []).map(Number);
   const amt = nums.length ? nums[nums.length - 1] : 0;
-  const isFuel = /加油|油|升|充电/.test(s);
+  const isFuel = /加油|油|升/.test(s), isChg = /充电|度|桩|电费/.test(s) && !isFuel;
+  if (_voiceKind === 'charge' || (isChg && _voiceKind !== 'cost' && _voiceKind !== 'fuel')) {
+    pickRec('charge');
+    if (amt) document.getElementById('chAmt').value = amt;
+    const pl = document.getElementById('chPlace');
+    if (pl && !pl.value) pl.value = s;
+    calcChPrice();
+    toast('已识别：' + s); return;
+  }
   if (_voiceKind === 'fuel' || (isFuel && _voiceKind !== 'cost')) {
     pickRec('fuel');
     if (amt) document.getElementById('fAmt').value = amt;
