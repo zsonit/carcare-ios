@@ -223,7 +223,9 @@
     cam: '<svg viewBox="0 0 24 24" stroke="#3c9e5f"><rect x="3.5" y="6.5" width="17" height="12.5" rx="2.6"/><circle cx="12" cy="12.8" r="3.4"/><path d="M9 6.5l1.2-2h3.6L15 6.5"/><path d="M19.4 4.2v3M20.9 5.7h-3" stroke="#e2892b"/></svg>',
     sos: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M12 3.5 3.5 20h17z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r=".4" fill="#d64541"/></svg>',
     pen: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M4 20c1-4.5 3-9.5 8.5-13.5C15 4.5 18 4 20 4c0 2-.5 5-2.5 7.5C13.5 17 8.5 19 4 20z"/><path d="M4 20c2.5-3.5 6-6.5 9.5-8.5"/></svg>',
-    diag: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="none"/></svg>'
+    diag: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="none"/></svg>',
+    fuel: '<svg viewBox="0 0 24 24" stroke="#1d9a5b"><rect x="4.5" y="3.5" width="10" height="17" rx="2"/><path d="M6.5 6.5h6v4h-6z"/><path d="M14.5 9h2.6a2 2 0 0 1 2 2v5.2a1.6 1.6 0 0 1-3.2 0V12h-1.4"/><path d="M7 20.5v-4h5v4"/></svg>',
+    ev: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M13 3 6 13.5h4.5L10 21l7-10.5h-4.5z"/></svg>'
   };
 
   var FEATURES = [
@@ -234,6 +236,8 @@
     { id: 'used', g: 'srv-g2', ic: 'price', t: 'AI卖车助手', d: 'AI帮您评估旧车卖价', fn: openUsed },
     { id: 'photo', g: 'srv-g1', ic: 'cam', t: '拍照问AI', d: '拍照问车，秒懂疑难', fn: openPhoto },
     { id: 'diag', g: 'srv-g2', ic: 'diag', t: 'AI查故障', d: '说说症状，AI帮您判断故障', fn: openDiag },
+    { id: 'fuelcalc', g: 'srv-g1', ic: 'fuel', t: '油耗计算', d: '百公里油耗 · 每公里油费', fn: openFuelCalc },
+    { id: 'evcalc', g: 'srv-g1', ic: 'ev', t: '电耗计算', d: '百公里电耗 · 每公里电费', fn: openEvCalc },
     { id: 'sos', g: 'srv-g2', ic: 'sos', t: '极速救援', d: '一键拨打，救援极达', fn: openSOS },
     { id: 'writer', g: 'srv-g3', ic: 'pen', t: 'AI写手', d: '一键生成事故报告 | 行车总结', fn: openWriter }
   ];
@@ -468,6 +472,127 @@
     }
 
     render();
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 油耗 / 电耗计算
+   * ------------------------------------------------------------------ */
+  function ecCss() {
+    if (document.getElementById('ecCss')) return;
+    var s = document.createElement('style');
+    s.id = 'ecCss';
+    s.textContent = '.ec-res{margin:12px 0 4px;padding:16px 14px;border-radius:16px;background:linear-gradient(135deg,#eaf3ff,#f2fbf4);text-align:center}'
+      + '.ec-res b{font-size:30px;font-weight:800;color:#0a6fd8;display:block;line-height:1.2}'
+      + '.ec-res i{font-style:normal;font-size:12px;color:#5a6d86;display:block;margin-top:4px}'
+      + '.ec-sub{display:flex;gap:8px;margin-top:10px}'
+      + '.ec-sub>div{flex:1;padding:10px 4px;border-radius:12px;background:#fff;border:1px solid #dbe5f2;text-align:center}'
+      + '.ec-sub b{font-size:14px;color:#1b2a3d;display:block}'
+      + '.ec-sub i{font-style:normal;font-size:10.5px;color:#8a99ad}'
+      + '.ec-f{margin-top:6px}'
+      + '.ec-f label{display:block;font-size:12px;color:#5a6d86;margin:10px 2px 4px;font-weight:700}'
+      + '.ec-f input{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:12px;border:1px solid #cfdaea;font-size:15px;outline:none;color:#1b2a3d;background:#fff}'
+      + '.ec-f input:focus{border-color:#0a84ff}'
+      + '.ec-kv{display:flex;justify-content:space-between;padding:8px 2px;border-bottom:1px solid #eef3f9;font-size:13.5px;color:#41536b}'
+      + '.ec-kv b{color:#1b2a3d;font-weight:800}'
+      + '.ec-note{font-size:11.5px;color:#8a99ad;line-height:1.6;margin-top:10px}';
+    document.head.appendChild(s);
+  }
+  function fuelAutoStats() {
+    var vid = curV().id;
+    var list = [];
+    try { list = (DB.fuels || []).filter(function (f) { return f.vehicleId === vid; }); } catch (e) { }
+    list = list.slice().sort(function (a, b) { return xNum(a.mileage) - xNum(b.mileage); });
+    var prevFull = null, accL = 0, sumL = 0, sumKm = 0, segs = [];
+    list.forEach(function (f) {
+      if (!prevFull) { prevFull = f; accL = 0; return; }
+      accL += xNum(f.liters);
+      if (f.full) {
+        var dist = xNum(f.mileage) - xNum(prevFull.mileage);
+        if (dist > 0 && accL > 0) {
+          segs.push({ date: f.date, l100: accL / dist * 100 });
+          sumL += accL; sumKm += dist;
+          accL = 0;
+        }
+        prevFull = f;
+      }
+    });
+    var totalL = 0, totalAmt = 0;
+    list.forEach(function (f) { totalL += xNum(f.liters); totalAmt += xNum(f.amount); });
+    return {
+      n: list.length, segs: segs,
+      avg: sumKm > 0 ? sumL / sumKm * 100 : 0,
+      last: segs.length ? segs[segs.length - 1].l100 : 0,
+      priceAvg: totalL > 0 ? totalAmt / totalL : 0
+    };
+  }
+  function openFuelCalc() {
+    ecCss();
+    var ov = sheet('srvEcCalc', '油耗计算', '<div id="fcMain"></div>');
+    var body = ov.querySelector('#fcMain');
+    var st = fuelAutoStats();
+    var carName = '';
+    try { if (S(curV().name)) carName = S(curV().name); } catch (e) { }
+    function calc() {
+      var L = xNum(body.querySelector('#fcL').value);
+      var amt = xNum(body.querySelector('#fcAmt').value);
+      var km = xNum(body.querySelector('#fcKm').value);
+      var box = body.querySelector('#fcRes');
+      if (!L || !km || km <= 0) { box.style.display = 'none'; return; }
+      var l100 = L / km * 100;
+      var h = '<b>' + l100.toFixed(1) + ' <span style="font-size:14px">L/100km</span></b><i>百公里油耗（这段 ' + km + ' km 烧了 ' + L + ' L）</i>';
+      var sub = '';
+      if (amt > 0) sub += '<div><b>&yen;' + (amt / km).toFixed(2) + '</b><i>每公里油费</i></div><div><b>&yen;' + (amt / km * 100).toFixed(0) + '</b><i>每百公里油费</i></div>';
+      if (st.priceAvg > 0) sub += '<div><b>&yen;' + (l100 * st.priceAvg).toFixed(0) + '</b><i>按记录均价每百公里</i></div>';
+      if (sub) h += '<div class="ec-sub">' + sub + '</div>';
+      box.innerHTML = h;
+      box.style.display = '';
+    }
+    body.innerHTML = (carName ? '<div class="oil-sec">当前车辆 <i>' + esc(carName) + '</i></div>' : '')
+      + (st.segs.length
+        ? '<div class="oil-sec">加油记录自动统计 <i>满箱法 · 共 ' + st.segs.length + ' 段</i></div>'
+          + '<div class="ec-kv"><span>历史平均油耗</span><b>' + st.avg.toFixed(1) + ' L/100km</b></div>'
+          + '<div class="ec-kv"><span>最近一箱油耗</span><b>' + st.last.toFixed(1) + ' L/100km</b></div>'
+          + (st.priceAvg > 0 ? '<div class="ec-kv"><span>平均油价</span><b>&yen;' + st.priceAvg.toFixed(2) + '/L</b></div>' : '')
+          + '<div class="ec-note">在「记录 → 加油」里连续两次勾选「加满」就会自动算出每箱油耗。</div>'
+        : '<div class="oil-note oil-src">还没有足够的加油记录。在「记录 → 加油」连续记两次「加满」即可自动统计；或直接在下面手算。</div>')
+      + '<div class="oil-sec">手动计算</div>'
+      + '<div class="ec-f"><label>这段烧了多少油（升）</label><input id="fcL" type="number" inputmode="decimal" placeholder="如 42.5"></div>'
+      + '<div class="ec-f"><label>这段跑了多少公里</label><input id="fcKm" type="number" inputmode="decimal" placeholder="如 580"></div>'
+      + '<div class="ec-f"><label>这段油费多少元（可选）</label><input id="fcAmt" type="number" inputmode="decimal" placeholder="如 380"></div>'
+      + '<div class="ec-res" id="fcRes" style="display:none"></div>'
+      + '<div class="ec-note">算法：百公里油耗 = 加油升数 ÷ 行驶公里 × 100。想更准：加满油后清零小计里程，下次再加满，用「两次加满之间的升数和公里数」来算。</div>';
+    ['fcL', 'fcKm', 'fcAmt'].forEach(function (id) {
+      body.querySelector('#' + id).addEventListener('input', calc);
+    });
+  }
+  function openEvCalc() {
+    ecCss();
+    var ov = sheet('srvEcCalc', '电耗计算', '<div id="evMain"></div>');
+    var body = ov.querySelector('#evMain');
+    function calc() {
+      var kwh = xNum(body.querySelector('#evK').value);
+      var amt = xNum(body.querySelector('#evAmt').value);
+      var km = xNum(body.querySelector('#evKm').value);
+      var box = body.querySelector('#evRes');
+      if (!kwh || !km || km <= 0) { box.style.display = 'none'; return; }
+      var k100 = kwh / km * 100;
+      var h = '<b>' + k100.toFixed(1) + ' <span style="font-size:14px">kWh/100km</span></b><i>百公里电耗（这段 ' + km + ' km 充了 ' + kwh + ' 度电）</i>';
+      var sub = '<div><b>&yen;' + (k100 * 0.6).toFixed(0) + '</b><i>每百公里·家充0.6元/度</i></div>'
+        + '<div><b>&yen;' + (k100 * 1.5).toFixed(0) + '</b><i>每百公里·快充1.5元/度</i></div>';
+      if (amt > 0) sub = '<div><b>&yen;' + (amt / km).toFixed(2) + '</b><i>每公里电费</i></div><div><b>&yen;' + (amt / km * 100).toFixed(0) + '</b><i>每百公里电费</i></div>' + sub;
+      h += '<div class="ec-sub">' + sub + '</div>';
+      box.innerHTML = h;
+      box.style.display = '';
+    }
+    body.innerHTML = '<div class="oil-sec">手动计算</div>'
+      + '<div class="ec-f"><label>这段充了多少电（度 / kWh）</label><input id="evK" type="number" inputmode="decimal" placeholder="如 45.6"></div>'
+      + '<div class="ec-f"><label>这段跑了多少公里</label><input id="evKm" type="number" inputmode="decimal" placeholder="如 320"></div>'
+      + '<div class="ec-f"><label>这段电费多少元（可选）</label><input id="evAmt" type="number" inputmode="decimal" placeholder="如 35"></div>'
+      + '<div class="ec-res" id="evRes" style="display:none"></div>'
+      + '<div class="ec-note">算法：百公里电耗 = 充电度数 ÷ 行驶公里 × 100。更准的量法：满电跑到剩约 20%，用充进去的度数和这段里程。家用充电桩约 0.5~0.7 元/度，公共快充约 1.2~1.8 元/度。</div>';
+    ['evK', 'evKm', 'evAmt'].forEach(function (id) {
+      body.querySelector('#' + id).addEventListener('input', calc);
+    });
   }
 
   function render() {
