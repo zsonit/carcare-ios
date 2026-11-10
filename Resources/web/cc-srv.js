@@ -205,7 +205,17 @@
       + '.srv-resc a b{display:block;font-size:19px;font-weight:900;letter-spacing:.5px}'
       + '.srv-resc a span{display:block;font-size:12px;color:#67788e;margin-top:4px}'
       + '.srv-resc .r-red b{color:#d64541}.srv-resc .r-org b{color:#e67e22}.srv-resc .r-grn b{color:#1d7a3c}.srv-resc .r-blu b{color:#0a6fd8}'
-      + '.srv-copy{font-size:12px;color:#0a6fd8;font-weight:700;border:0;background:none;padding:2px 6px;cursor:pointer;text-decoration:underline}';
+      + '.srv-copy{font-size:12px;color:#0a6fd8;font-weight:700;border:0;background:none;padding:2px 6px;cursor:pointer;text-decoration:underline}'
+      /* ---- AI识车 ---- */
+      + '.cs-sec{font-size:13.5px;font-weight:800;color:#1b2a3d;margin:14px 0 2px}'
+      + '.cs-way{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid #dbe5f2;font-size:14px;font-weight:700;color:#22344a;cursor:pointer;width:100%;text-align:left;margin-top:8px}'
+      + '.cs-way:disabled{opacity:.55}'
+      + '.cs-way .e{font-size:18px;flex:none}'
+      + '.cs-way b{flex:1;font-size:14px}'
+      + '.cs-way small{display:block;font-size:11.5px;color:#8a99ad;font-weight:600;margin-top:2px}'
+      + '.cs-nev{flex:none;padding:10px 12px;border-radius:12px;border:1.5px solid #c9d6e8;background:#fff;font-size:12.5px;font-weight:800;color:#7c8ba1}'
+      + '.cs-nev.on{border-color:#1d9a5b;background:#e9f7ee;color:#1d7a3c}'
+      + '.cs-est{flex:none;padding:0 12px;border-radius:12px;border:1px solid #cfdaea;background:#fff;color:#0a6fd8;font-size:12.5px;font-weight:700}';
     var host = document.head || document.documentElement;
     var st = document.createElement('style');
     st.textContent = css;
@@ -221,6 +231,7 @@
     doc: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><rect x="4.5" y="3.5" width="12" height="17" rx="2.4"/><path d="M8 8h5M8 11.5h3"/><circle cx="15.5" cy="15.5" r="3.2" fill="#eef2fd"/><path d="M18 18l2.6 2.6"/></svg>',
     pick: '<svg viewBox="0 0 24 24" stroke="#e2892b"><path d="M5 16.5c1.8-5.2 6-8 11.5-8 0 0 2 .2 2.5 2.4.5 2.3-1.5 3.1-3.5 3.1-3.8 0-7.5 1-10.5 2.5z"/><path d="M8.5 12.2c1.5-2.3 3.6-3.4 6-3.6"/><circle cx="18.6" cy="5.6" r="1.4"/></svg>',
     price: '<svg viewBox="0 0 24 24" stroke="#c8482f"><path d="M4 13.6 10.4 20a2 2 0 0 0 2.9 0l5.5-5.5a2 2 0 0 0 0-2.9L13.2 5.2a2 2 0 0 0-1.5-.6l-4.6.3a2 2 0 0 0-1.9 1.9l-.3 4.6c0 .6.2 1.1.6 1.5z" transform="rotate(-45 12 12)"/><circle cx="9.5" cy="9.5" r="1.6"/><path d="M12.5 13.5l3 3M14 12l3 3" transform="rotate(-45 12 12)"/></svg>',
+    scan: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" stroke="#0a84ff"/><path d="M7.5 12.6c1-2.5 3-4 5.4-4 0 0 1.4.1 1.7 1.4.3 1.4-.8 2-2.3 2-2.4 0-4.3.7-5.9 1.6"/><circle cx="16.7" cy="9.9" r="1.1"/><path d="M6 15.5h12" stroke-dasharray="2 1.6"/></svg>',
     cam: '<svg viewBox="0 0 24 24" stroke="#3c9e5f"><rect x="3.5" y="6.5" width="17" height="12.5" rx="2.6"/><circle cx="12" cy="12.8" r="3.4"/><path d="M9 6.5l1.2-2h3.6L15 6.5"/><path d="M19.4 4.2v3M20.9 5.7h-3" stroke="#e2892b"/></svg>',
     sos: '<svg viewBox="0 0 24 24" stroke="#d64541"><path d="M12 3.5 3.5 20h17z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r=".4" fill="#d64541"/></svg>',
     pen: '<svg viewBox="0 0 24 24" stroke="#4a63d8"><path d="M4 20c1-4.5 3-9.5 8.5-13.5C15 4.5 18 4 20 4c0 2-.5 5-2.5 7.5C13.5 17 8.5 19 4 20z"/><path d="M4 20c2.5-3.5 6-6.5 9.5-8.5"/></svg>',
@@ -235,6 +246,7 @@
     { id: 'report', g: 'srv-g3', ic: 'doc', t: '报告解读', d: '专业解读，科学分析，智慧养护', fn: openReport },
     { id: 'pick', g: 'srv-g4', ic: 'pick', t: 'AI选车', d: 'AI帮您选到心仪的车', fn: openPick, tag: '+100' },
     { id: 'used', g: 'srv-g2', ic: 'price', t: 'AI卖车助手', d: 'AI帮您评估旧车卖价', fn: openUsed },
+    { id: 'carscan', g: 'srv-g3', ic: 'scan', t: 'AI识车', d: '行驶证/车牌秒识别车型与里程', fn: openCarScan },
     { id: 'photo', g: 'srv-g1', ic: 'cam', t: '拍照问AI', d: '拍照问车，秒懂疑难', fn: openPhoto },
     { id: 'diag', g: 'srv-g2', ic: 'diag', t: 'AI查故障', d: '说说症状，AI帮您判断故障', fn: openDiag },
     { id: 'fuelcalc', g: 'srv-g1', ic: 'fuel', t: '油耗计算', d: '百公里油耗 · 每公里油费', fn: openFuelCalc },
@@ -1718,6 +1730,194 @@
           + (base ? '；折旧基准参考（收购口径）约 ' + base + ' 万元' : '')
           + '。请估价。' }
       ], this);
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 9.5 AI识车：车牌绑定 + 行驶证识别 / AI车型搜索 / 品牌手选
+   * ------------------------------------------------------------------ */
+  function jsonFrom(t) {
+    var m = String(t || '').match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    try { return JSON.parse(m[0]); } catch (e) { return null; }
+  }
+  function openCarScan() {
+    var curY = new Date().getFullYear();
+    var years = []; for (var yy = curY; yy >= 1990; yy--) years.push(String(yy));
+    var months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+    var provs = (typeof PROVINCES !== 'undefined' && PROVINCES.length) ? PROVINCES : ['京', '沪', '粤', '苏', '浙'];
+    function opts(arr, def, ph) {
+      return (ph ? '<option value=""' + (def ? '' : ' selected') + '>' + ph + '</option>' : '')
+        + arr.map(function (x) { return '<option value="' + esc(x) + '"' + (x === def ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+    }
+    var energy = '';
+    /* 当前车辆默认值：已有车牌/车型就带出来 */
+    var cv = curV() || {};
+    var cvProv = (S(cv.plate).match(/^[一-龥]/) || [''])[0];
+    var cvNo = S(cv.plate).replace(/[一-龥·•・\s]/g, '').toUpperCase();
+    var curY0 = S(cv.buyDate).slice(0, 4);
+    var curM0 = parseInt(S(cv.buyDate).slice(5, 7), 10) || '';
+    var brandKeys = Object.keys(CAR_BRANDS);
+    var inner = '<div class="srv-lead">绑定车牌，AI 自动识别车型、排量与上牌时间；行驶里程没填的话，会按车龄智能估算。</div>'
+      + '<div class="srv-glabel">车牌（用于绑定车辆）</div>'
+      + '<div class="srv-frow2">'
+      + '<select id="csProv" title="省份简称"><option value="">省</option>' + opts(provs, cvProv) + '</select>'
+      + '<input id="csPlate" maxlength="7" placeholder="字母+数字" value="' + esc(cvNo) + '">'
+      + '<button class="cs-nev" id="csNev" type="button">新能源</button>'
+      + '</div>'
+      + '<div class="srv-hint">新能源车牌 D 开头按纯电、F 开头按油电混动识别；燃油车不用管。</div>'
+      + '<div class="cs-sec">识别车辆信息（选一种方式）</div>'
+      + '<button class="cs-way" id="csDoc"><span class="e">📷</span><span><b>行驶证识别（全自动·推荐）</b><small>拍一张行驶证主页，AI 自动填好车型排量</small></span></button>'
+      + '<div class="srv-frow" style="margin-top:8px"><div class="srv-unit"><input id="csQ" placeholder="AI车型搜索：如 丰田 花冠 1.6 自动"><button class="cs-est" id="csQGo">搜索</button></div></div>'
+      + '<div class="srv-frow3">'
+      + '<select id="csBrand" title="品牌"><option value="">品牌手选</option>' + opts(brandKeys) + '<option value="其他品牌">其他品牌</option></select>'
+      + '<select id="csModelSel" title="车型"><option value="">先选品牌</option></select>'
+      + '<input id="csModelTxt" placeholder="输入车型" style="display:none">'
+      + '</div>'
+      + '<div class="cs-sec">识别结果（确认后可修改）</div>'
+      + '<div class="srv-frow"><input id="csModel" placeholder="车型，如：丰田 花冠 2013款 1.6L 自动" value="' + esc(S(cv.model)) + '"></div>'
+      + '<div class="srv-frow3">'
+      + '<input id="csDisp" placeholder="排量，如 1.6L" value="' + esc(S(cv.engine)) + '">'
+      + '<select id="csRegY" title="上牌年份">' + opts(years, curY0 && years.indexOf(curY0) >= 0 ? curY0 : null, '上牌年') + '</select>'
+      + '<select id="csRegM" title="上牌月份">' + opts(months, curM0 ? curM0 + '月' : null, '上牌月') + '</select>'
+      + '</div>'
+      + '<div class="srv-frow"><div class="srv-unit"><input id="csKm" type="number" inputmode="numeric" placeholder="行驶里程" value="' + esc(N(cv.mileage) || '') + '"><span class="u">公里</span><button class="cs-est" id="csEst" type="button">按车龄估算</button></div></div>'
+      + '<input id="csVin" type="hidden" value="' + esc(S(cv.vin)) + '">'
+      + '<button class="srv-btn" id="csGo">完成添加</button>'
+      + '<div class="srv-out" id="csOut" style="display:none"></div>'
+      + '<div class="srv-tip">识别由 AI 完成：行驶证识别读照片上的品牌型号、注册日期并推断排量；车型搜索根据你对车辆的描述给出资料。车牌本身不携带车型信息（车管所数据不开放，第三方App也是接的付费数据库），所以纯输入车牌查不到真实车型——本功能用行驶证拍照做到「零输入」，一样省事。识别结果请核对后再保存。</div>';
+    var ov = sheet('srvCarScan', 'AI识车 · 添加车辆', inner);
+    var out = ov.querySelector('#csOut');
+    var nevB = ov.querySelector('#csNev');
+    if (/^[DF]/.test(cvNo) && cvNo.length >= 6) nevB.classList.add('on');
+    ov.querySelector('#csPlate').addEventListener('input', function () {
+      this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (/^[DF]/.test(this.value) && this.value.length >= 6) nevB.classList.add('on');
+    });
+    nevB.onclick = function () { this.classList.toggle('on'); };
+    /* 品牌手选级联 */
+    var brandSel = ov.querySelector('#csBrand'), modelSel = ov.querySelector('#csModelSel'), modelTxt = ov.querySelector('#csModelTxt');
+    brandSel.onchange = function () {
+      var b = brandSel.value;
+      if (b === '其他品牌') { modelSel.style.display = 'none'; modelTxt.style.display = ''; modelTxt.value = ''; return; }
+      modelSel.style.display = ''; modelTxt.style.display = 'none';
+      modelSel.innerHTML = b && CAR_BRANDS[b] ? '<option value="">选车型</option>' + opts(CAR_BRANDS[b].split(',')) : '<option value="">先选品牌</option>';
+    };
+    function pickedModel() {
+      return modelSel.style.display === 'none' ? S(modelTxt.value).trim() : S(modelSel.value).trim();
+    }
+    brandSel.addEventListener('change', function () {
+      var b = brandSel.value, m = pickedModel();
+      if (b && m && b !== '其他品牌') ov.querySelector('#csModel').value = b + ' ' + m;
+      else if (m) ov.querySelector('#csModel').value = m;
+    });
+    modelSel.addEventListener('change', function () {
+      var b = brandSel.value, m = pickedModel();
+      if (b && m && b !== '其他品牌') ov.querySelector('#csModel').value = b + ' ' + m;
+      else if (m) ov.querySelector('#csModel').value = m;
+    });
+    /* 按车龄估算里程 */
+    ov.querySelector('#csEst').onclick = function () {
+      var y = parseInt(ov.querySelector('#csRegY').value, 10), m = parseInt(ov.querySelector('#csRegM').value, 10) || 1;
+      if (!y) { toastMsg('先选一下上牌年份'); return; }
+      var now = new Date();
+      var monthsCnt = Math.max(1, (now.getFullYear() - y) * 12 + (now.getMonth() + 1) - m);
+      var km = Math.round(monthsCnt * 1000 / 100) * 100; /* 年均1.2万公里 ≈ 每月1000 */
+      ov.querySelector('#csKm').value = km;
+      toastMsg('按年均1.2万公里估算 ' + km + ' km，可手动改成实际值');
+    };
+    /* AI 结果回填 */
+    function fill(j) {
+      if (!j) return false;
+      if (S(j.model)) ov.querySelector('#csModel').value = S(j.model);
+      if (S(j.disp)) ov.querySelector('#csDisp').value = S(j.disp);
+      if (S(j.vin)) ov.querySelector('#csVin').value = S(j.vin);
+      if (/^(fuel|hev|phev|ev)$/.test(S(j.energy))) energy = S(j.energy);
+      var rg = S(j.reg).match(/^(\d{4})-?(\d{1,2})?/);
+      if (rg) {
+        if (years.indexOf(rg[1]) >= 0) ov.querySelector('#csRegY').value = rg[1];
+        if (rg[2]) ov.querySelector('#csRegM').value = parseInt(rg[2], 10) + '月';
+      }
+      if (!N(ov.querySelector('#csKm').value)) ov.querySelector('#csEst').click();
+      return true;
+    }
+    function runAI(userMsg, sys, img, okTip) {
+      if (!aiOK()) { out.style.display = ''; out.innerHTML = '<span style="color:#b26a00">先配置 AI 模型（填一次 Key 就能用）</span>'; aiCfg(); return; }
+      out.style.display = '';
+      out.innerHTML = '<span class="ai-cursor"></span>';
+      window.ccAiCall([
+        { role: 'system', content: sys },
+        visionMsg(userMsg, img)
+      ], {
+        onDelta: function () { },
+        onDone: function (full, err) {
+          if (err) { out.innerHTML = '<span style="color:#c0392b">识别失败：' + esc(err) + '</span>'; return; }
+          var j = jsonFrom(full);
+          if (!j || !S(j.model)) { out.innerHTML = '<span style="color:#b26a00">没认出来，换个更清晰的输入再试。</span>'; return; }
+          fill(j);
+          out.innerHTML = '✅ ' + okTip + '：<b>' + esc(S(j.model)) + '</b>' + (S(j.disp) ? ' · ' + esc(S(j.disp)) : '') + (S(j.reg) ? ' · 上牌 ' + esc(S(j.reg)) : '') + '。核对下方信息后点「完成添加」。';
+        }
+      });
+    }
+    /* ① 行驶证识别 */
+    ov.querySelector('#csDoc').onclick = function () {
+      var btn = this;
+      pickImage(function (d) {
+        if (!d) return;
+        btn.innerHTML = '<span class="e">📷</span><span><b>重新识别行驶证</b><small>已选图片，点击可换一张</small></span>';
+        runAI('请识别这张行驶证/登记证书照片，只输出要求的JSON。',
+          '你是行驶证识别助手。识别图中机动车行驶证（或登记证书）主页：品牌型号、车辆类型、注册日期、能源类型，并结合车型知识推断排量与年款。只输出一个JSON对象：{"brand":"品牌","model":"完整车型（品牌 车系 年款 排量 版本）","disp":"排量，如1.6L/1.5T/纯电","reg":"注册日期YYYY-MM，图中没有就给空字符串","energy":"fuel/hev/phev/ev 之一","vin":"车架号VIN，图中没有就给空字符串"}。不要输出JSON以外的任何内容。',
+          d, '已识别');
+      });
+    };
+    /* ② AI车型搜索 */
+    ov.querySelector('#csQGo').onclick = function () {
+      var q = S(ov.querySelector('#csQ').value).trim();
+      if (!q) { toastMsg('输入车型关键词，如：丰田 花冠 1.6 自动'); return; }
+      runAI('车型描述：' + q + '。只输出要求的JSON。',
+        '你是汽车资料库助手。根据用户描述的品牌/车系/年款/排量，给出该车的标准资料。只输出一个JSON对象：{"brand":"品牌","model":"完整车型（品牌 车系 年款 排量 变速箱或版本，用户给了年款就用他的）","disp":"排量，如1.6L/1.5T/纯电","reg":"常见首次注册年月YYYY-MM（用户已给年份就用它）","energy":"fuel/hev/phev/ev 之一","vin":""}。不要输出JSON以外的任何内容。',
+        null, '已找到');
+    };
+    /* ③ 完成添加：更新同牌车辆或新建 */
+    ov.querySelector('#csGo').onclick = function () {
+      var model = S(ov.querySelector('#csModel').value).trim();
+      if (!model) { toastMsg('先识别或填写车型'); return; }
+      var prov = S(ov.querySelector('#csProv').value);
+      var no = S(ov.querySelector('#csPlate').value).toUpperCase();
+      var nev = nevB.classList.contains('on');
+      var plate = prov && no ? prov + '·' + no : (no || '');
+      if (nev && no && !/^[DF]/.test(no)) { toastMsg('新能源车牌一般是 D 或 F 开头，确认一下'); return; }
+      var disp = S(ov.querySelector('#csDisp').value).trim();
+      var regY = S(ov.querySelector('#csRegY').value);
+      var regM = parseInt(S(ov.querySelector('#csRegM').value), 10) || 1;
+      var km = N(ov.querySelector('#csKm').value);
+      var vin = S(ov.querySelector('#csVin').value).trim();
+      var pw = nev ? (/^D/.test(no) ? 'ev' : 'hev') : (energy || 'fuel');
+      var list = getDB().vehicles || [];
+      var v = plate ? list.find(function (x) { return x.plate === plate; }) : null;
+      var vid;
+      if (v) {
+        vid = v.id;
+        v.model = model; v.power = pw; v.plate = plate;
+        if (regY) v.buyDate = regY + '-' + P2(regM) + '-01';
+        if (km) v.mileage = km;
+        if (disp) v.engine = disp;
+        if (vin && !v.vin) v.vin = vin;
+      } else {
+        vid = uid();
+        list.push({
+          id: vid, name: plate || model, model: model, power: pw, plate: plate,
+          buyDate: regY ? regY + '-' + P2(regM) + '-01' : '', mileage: km,
+          engine: disp, vin: vin, insuranceDue: '', inspectionDue: ''
+        });
+        try { CUR = vid; } catch (e) { }
+      }
+      if (typeof ensureDefaultRules === 'function') { try { ensureDefaultRules(); } catch (e) { } }
+      if (typeof save === 'function') { try { save(); } catch (e) { } }
+      if (typeof refreshVehicleSelect === 'function') { try { refreshVehicleSelect(); } catch (e) { } }
+      if (typeof renderAll === 'function') { try { renderAll(); } catch (e) { } }
+      toastMsg('车辆已保存' + (km ? '' : '，里程可在「车辆管理」里补充'));
+      ov.remove();
     };
   }
 
