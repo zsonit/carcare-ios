@@ -857,7 +857,7 @@
           <div class="grid2">
             <div><label>类型</label>
               <select id="cType2">
-                <option>油费</option><option>停车/过路</option><option>洗车美容</option><option>保险</option>
+                <option>油费</option><option>电费</option><option>停车/过路</option><option>洗车美容</option><option>保险</option>
                 <option>维修</option><option>违章罚款</option><option>年检</option><option>其他</option>
               </select></div>
             <div><label>金额 (¥)</label><input id="cAmt2" type="number" inputmode="decimal" placeholder="0.00"></div>
@@ -965,7 +965,7 @@
         </div>
         <div id="finChart"></div>
         <div id="finBreak" style="margin-top:8px"></div>
-        <button class="btn line" style="width:100%;margin-top:10px" onclick="openCostModal()">+ 记一笔（油费/保养/其他）</button>
+        <button class="btn line" style="width:100%;margin-top:10px" onclick="openCostModal()">+ 记一笔（油费/电费/保养/其他）</button>
       </div>
 
       <!-- 套餐与储值 -->
@@ -1624,7 +1624,7 @@ function renderFinance(){
     (DB.fuels||[]).filter(f=>f.vehicleId===CUR).map(f=>({type:'加油',amount:+f.amount||0,date:f.date}))
   ).concat(
     (DB.charges||[]).filter(c=>c.vehicleId===CUR).map(c=>({type:'充电',amount:+c.amount||0,date:c.date}))
-  ).map(c=>c.type==='油费'?Object.assign({},c,{type:'加油'}):c);   // 手记的「油费」并入加油，避免重复分类
+  ).map(c=>c.type==='油费'?Object.assign({},c,{type:'加油'}):(c.type==='电费'?Object.assign({},c,{type:'充电'}):c));   // 手记的「油费/电费」分别并入加油/充电，避免重复分类
   const total=costs.reduce((s,c)=>s+(+c.amount||0),0);
   const now=new Date();const mKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const month=costs.filter(c=>c.date&&c.date.slice(0,7)===mKey).reduce((s,c)=>s+(+c.amount||0),0);
@@ -1824,7 +1824,7 @@ function openCostModal(){
   openModal(`<h2>记一笔养车费用</h2>
     <label>类型</label>
     <select id="cType">
-      <option>油费</option><option>保险</option><option>维修</option><option>停车/过路</option><option>其他</option>
+      <option>油费</option><option>电费</option><option>保险</option><option>维修</option><option>停车/过路</option><option>其他</option>
     </select>
     <label>金额 (¥)</label><input id="cAmt" type="number" inputmode="decimal" placeholder="0.00">
     <label>日期</label><input id="cDate" type="date" value="${today()}">
