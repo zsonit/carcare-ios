@@ -1,5 +1,5 @@
 // 车管家 离线独立版 Service Worker：首次加载后永久可离线使用
-const CACHE='carcare-offline-v26';
+const CACHE='carcare-offline-v27';
 const ASSETS=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png','./cc-ext.js','./cc-ai.js','./cc-srv.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).catch(()=>{}));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))));self.clients.claim());});

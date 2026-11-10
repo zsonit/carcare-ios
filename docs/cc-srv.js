@@ -165,11 +165,12 @@
       + '.dg-ta{width:100%;box-sizing:border-box;min-height:110px;padding:12px;border-radius:14px;border:1px solid #cfdaea;font-size:14px;line-height:1.6;outline:none;resize:vertical;font-family:inherit;color:#1b2a3d;background:#fff}'
       + '.dg-ta:focus{border-color:#0a84ff}'
       + '.dg-tacnt{text-align:right;font-size:11px;color:#8a99ad;margin-top:3px}'
-      + '.dg-voice{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;background:#fff;border:1.5px dashed #0a84ff;cursor:pointer;margin-top:14px}'
-      + '.dg-voice:active{background:#f0f7ff}'
-      + '.dg-voice .mi{flex:none;width:38px;height:38px;border-radius:50%;background:#eaf3ff;display:flex;align-items:center;justify-content:center;font-size:18px}'
-      + '.dg-voice b{font-size:14.5px;color:#1b2a3d;display:block}'
-      + '.dg-voice span{font-size:11.5px;color:#8a99ad}'
+      + '.dg-hold{display:flex;align-items:center;justify-content:center;gap:9px;padding:15px 14px;border-radius:16px;background:#fff;border:1.5px solid #0a84ff;cursor:pointer;margin-top:14px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}'
+      + '.dg-hold b{font-size:15.5px;color:#0a6fd8;font-weight:800}'
+      + '.dg-hold .mi{font-size:19px}'
+      + '.dg-hold.rec{background:#0a84ff;border-color:#0a84ff}'
+      + '.dg-hold.rec b{color:#fff}'
+      + '.dg-holdtip{font-size:11.5px;color:#8a99ad;line-height:1.5;margin-top:7px;text-align:center}'
       + '.dg-back{display:block;width:100%;text-align:center;font-size:13.5px;color:#0a6fd8;font-weight:700;margin-top:12px;background:none;border:0;padding:8px}'
       + '#oilKeyBox{display:flex;gap:8px;margin-top:6px}'
       + '#oilKeyBox input{flex:1;min-width:0;box-sizing:border-box;padding:9px 12px;border-radius:12px;border:1px solid #cfdaea;font-size:13px;outline:none}'
@@ -273,7 +274,8 @@
           + '<div class="oil-sec">用文字描述一下</div>'
           + '<textarea class="dg-ta" id="dgTa" maxlength="300" placeholder="例如：什么时候开始、什么速度下更明显、是否伴随气味或抖动"></textarea>'
           + '<div class="dg-tacnt"><span id="dgCnt">0</span>/300</div>'
-          + '<div class="dg-voice" id="dgVoice"><span class="mi">🎙️</span><span style="flex:1"><b>点击说话</b><span>描述正在发生什么</span></span></div>'
+          + '<div class="dg-hold" id="dgHold"><span class="mi">🎙️</span><b>按住 说话</b></div>'
+          + '<div class="dg-holdtip">按住上方按钮说话，实时转文字；松开自动填入，手指上滑取消</div>'
           + '<button class="srv-btn" id="dgGo">开始 AI 诊断</button>'
           + '<button class="dg-back" id="dgBack">‹ 上一步，改症状</button>';
       } else {
@@ -295,7 +297,7 @@
       } else if (step === 2) {
         var ta = body.querySelector('#dgTa'), cnt = body.querySelector('#dgCnt');
         ta.oninput = function () { cnt.textContent = String(ta.value.length); };
-        body.querySelector('#dgVoice').onclick = function () { diagVoice(ta, cnt); };
+        holdBind(body.querySelector('#dgHold'));
         body.querySelector('#dgBack').onclick = function () { step = 1; render(); };
         body.querySelector('#dgGo').onclick = function () { step = 3; render(); runAI(ta.value); };
       } else {
@@ -304,28 +306,152 @@
       }
     }
 
-    function diagVoice(ta, cnt) {
-      var put = function (t) {
-        if (!document.body.contains(ta)) return;
-        if (!t) { toastMsg('没听清，再试一次'); return; }
-        ta.value = (ta.value ? ta.value + ' ' : t).slice(0, 300);
-        cnt.textContent = String(ta.value.length);
-      };
+    /* 按住说话（微信式）：按住→实时出字→松开填入；上滑取消。
+       原生走 aiVoiceStart/aiVoiceEnd 流式识别（与 AI 对话同一套），回调经 __ccHoldHook 路由，不抢 AI 对话的全局回调。 */
+    var holdHooked = false;
+    function ensureHoldHook() {
+      if (holdHooked) return;
+      holdHooked = true;
+      var p0 = window.ccAiVoicePartial, r0 = window.ccAiVoiceResult, c0 = window.ccAiVoiceCancel;
+      window.ccAiVoicePartial = function (t) { if (window.__ccHoldHook) { window.__ccHoldHook.partial(String(t || '')); return; } return p0 && p0(t); };
+      window.ccAiVoiceResult = function (t) { if (window.__ccHoldHook) { var h = window.__ccHoldHook; window.__ccHoldHook = null; h.result(String(t || '')); return; } return r0 && r0(t); };
+      window.ccAiVoiceCancel = function () { if (window.__ccHoldHook) { var h = window.__ccHoldHook; window.__ccHoldHook = null; h.cancel(); return; } return c0 && c0(); };
+    }
+    var hv = null; /* 当前按住状态 */
+    var holdEl = null, holdTa = null, holdCnt = null;
+    var pendMsg = null; /* 原生 cancel 回调时展示的提示 */
+
+    function holdOv(open) {
+      var old = document.getElementById('dgVoiceOv');
+      if (old) old.remove();
+      if (!open) return;
+      var el = document.createElement('div');
+      el.className = 'ai-voiceov'; el.id = 'dgVoiceOv';
+      var bars = '';
+      for (var i = 0; i < 9; i++) bars += '<i style="animation-delay:' + (i * 90) + 'ms"></i>';
+      el.innerHTML = '<div class="ai-voicebox" id="dgVoiceBox">'
+        + '<div class="hint" id="dgVoiceHint">正在听，请说话</div>'
+        + '<div class="ai-wave">' + bars + '</div>'
+        + '<div class="ai-voicetxt" id="dgVoiceTxt">…</div>'
+        + '</div>';
+      document.body.appendChild(el);
+    }
+    function holdTxt(t) { var x = document.getElementById('dgVoiceTxt'); if (x) x.textContent = t || '…'; }
+    function holdHint(t, cancel) {
+      var x = document.getElementById('dgVoiceHint');
+      var box = document.getElementById('dgVoiceBox');
+      if (x) x.textContent = t;
+      if (box) box.classList.toggle('cancel', !!cancel);
+    }
+    function holdFill(s) {
+      if (!holdTa || !document.body.contains(holdTa)) return;
+      s = String(s || '').trim();
+      if (s) {
+        holdTa.value = ((holdTa.value ? holdTa.value + ' ' : '') + s).slice(0, 300);
+        if (holdCnt) holdCnt.textContent = String(holdTa.value.length);
+        toastMsg('已转文字');
+      } else toastMsg('没听清，请再试一次');
+    }
+    function holdCleanup() {
+      hv = null;
+      holdOv(false);
+      if (holdEl) holdEl.classList.remove('rec');
+      window.__ccHoldHook = null;
+    }
+    function holdStart(e) {
+      if (hv) return;
+      e.preventDefault();
+      ensureHoldHook();
+      holdTa = body.querySelector('#dgTa');
+      holdCnt = body.querySelector('#dgCnt');
+      holdEl = body.querySelector('#dgHold');
+      var supported = window.__ccNative || window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!supported) { toastMsg('当前环境不支持语音输入'); return; }
+      hv = { t0: Date.now(), cancel: false, fin: '', rec: null };
+      holdEl.classList.add('rec');
+      holdOv(true);
+      try { if (e.target && e.target.setPointerCapture) e.target.setPointerCapture(e.pointerId); } catch (err) { }
       if (window.__ccNative) {
-        window.__ccVoiceHook = put;
-        try { window.__ccNative({ type: 'voice' }); toastMsg('请说出症状，如「怠速时发动机有哒哒声」'); }
-        catch (e) { toastMsg('语音不可用'); }
+        window.__ccHoldHook = {
+          partial: function (t) { if (hv && !hv.cancel) holdTxt(t); },
+          result: function (t) { holdCleanup(); holdFill(t); },
+          cancel: function () { holdCleanup(); toastMsg(pendMsg || '已取消'); }
+        };
+        try { window.__ccNative({ type: 'aiVoiceStart' }); } catch (err) { holdCleanup(); toastMsg('语音不可用'); }
         return;
       }
       var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) { toastMsg('当前环境不支持语音输入，请用文字描述'); return; }
       try {
-        var r = new SR(); r.lang = 'zh-CN'; r.interimResults = false;
-        r.onresult = function (ev) { put(ev.results[0][0].transcript); };
-        r.onerror = function () { toastMsg('语音识别失败，请用文字描述'); };
-        r.start();
-        toastMsg('正在听，请说出症状…');
-      } catch (e) { toastMsg('语音识别启动失败'); }
+        var rec = new SR();
+        rec.lang = 'zh-CN'; rec.interimResults = true; rec.continuous = false;
+        rec.onresult = function (ev) {
+          var t = '';
+          for (var i = 0; i < ev.results.length; i++) t += (ev.results[i][0] && ev.results[i][0].transcript) || '';
+          if (hv) hv.fin = t;
+          if (!hv || !hv.cancel) holdTxt(t);
+        };
+        rec.onerror = function () { };
+        hv.rec = rec;
+        rec.start();
+      } catch (err) { holdCleanup(); toastMsg('语音启动失败'); }
+    }
+    function holdMove(e) {
+      if (!hv) return;
+      var cancel = false;
+      try {
+        var r = holdEl ? holdEl.getBoundingClientRect() : null;
+        var y = (typeof e.clientY === 'number') ? e.clientY : 0;
+        cancel = !!(r && y < r.top - 30);
+      } catch (err) { }
+      if (cancel !== hv.cancel) {
+        hv.cancel = cancel;
+        holdHint(cancel ? '松开手指，取消本次' : '正在听，请说话', cancel);
+        holdTxt(cancel ? '' : (hv.fin || ''));
+      }
+    }
+    function holdEnd() {
+      if (!hv) return;
+      var st = hv, cancel = st.cancel;
+      var brief = !cancel && (Date.now() - st.t0) < 350;
+      pendMsg = null;
+      var closeUI = function () { holdOv(false); if (holdEl) holdEl.classList.remove('rec'); };
+      if (window.__ccNative) {
+        hv = null; /* 阻断后续 pointer 事件；钩子留到原生回调再清 */
+        var hook = window.__ccHoldHook;
+        try { window.__ccNative({ type: 'aiVoiceEnd', cancel: !!(cancel || brief) }); } catch (err) { }
+        closeUI();
+        if (brief) { pendMsg = '请按住按钮说话'; toastMsg(pendMsg); }
+        /* 兜底：原生 3 秒内没回调就自行解钩 */
+        setTimeout(function () { if (window.__ccHoldHook === hook) window.__ccHoldHook = null; }, 3000);
+        return;
+      }
+      /* 浏览器路径 */
+      hv = null;
+      closeUI();
+      if (cancel || brief) {
+        if (st.rec) { try { st.rec.abort(); } catch (err) { } }
+        if (brief) toastMsg('请按住按钮说话');
+        else toastMsg('已取消');
+        return;
+      }
+      if (st.rec) {
+        var handled = false;
+        st.rec.onend = function () {
+          if (handled) return;
+          handled = true;
+          holdFill(st.fin);
+        };
+        setTimeout(function () { if (!handled) { handled = true; holdFill(st.fin); } }, 1600);
+        try { st.rec.stop(); } catch (err) { }
+      }
+    }
+    function holdBind(el) {
+      if (!el) return;
+      el.addEventListener('pointerdown', holdStart);
+      el.addEventListener('pointermove', holdMove);
+      el.addEventListener('pointerup', holdEnd);
+      el.addEventListener('pointercancel', holdEnd);
+      el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     }
 
     function runAI(detail) {
