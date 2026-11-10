@@ -215,7 +215,19 @@
       + '.cs-way small{display:block;font-size:11.5px;color:#8a99ad;font-weight:600;margin-top:2px}'
       + '.cs-nev{flex:none;padding:10px 12px;border-radius:12px;border:1.5px solid #c9d6e8;background:#fff;font-size:12.5px;font-weight:800;color:#7c8ba1}'
       + '.cs-nev.on{border-color:#1d9a5b;background:#e9f7ee;color:#1d7a3c}'
-      + '.cs-est{flex:none;padding:0 12px;border-radius:12px;border:1px solid #cfdaea;background:#fff;color:#0a6fd8;font-size:12.5px;font-weight:700}';
+      + '.cs-est{flex:none;padding:0 12px;border-radius:12px;border:1px solid #cfdaea;background:#fff;color:#0a6fd8;font-size:12.5px;font-weight:700}'
+      + '.cs-qrow{display:flex;gap:8px;align-items:flex-end;margin-top:10px}'
+      + '.cs-qrow .srv-btn{margin-top:0;flex:1}'
+      + '.cs-qcfg{flex:none;padding:12px 14px;border-radius:14px;border:1px solid #c9d6e8;background:#fff;color:#0a6fd8;font-size:13.5px;font-weight:800}'
+      + '.cs-warn{font-size:12.5px;line-height:1.6;color:#8a5a00;background:#fff8e6;border:1px solid #ffe1a8;border-radius:10px;padding:8px 10px;margin-bottom:8px}'
+      + '.cs-local{font-size:13px;color:#22344a;margin:6px 0 2px}'
+      + '.cs-raw{font-size:11px;color:#8a99ad;word-break:break-all;margin-top:6px;line-height:1.5}'
+      + '.cs-src{font-size:11px;color:#1d7a3c;margin-top:8px;font-weight:700}'
+      + '.cs-cands{display:flex;flex-direction:column;gap:8px;margin-top:8px}'
+      + '.cs-cand{text-align:left;padding:10px 12px;border-radius:12px;border:1.5px solid #dbe5f2;background:#fff;cursor:pointer}'
+      + '.cs-cand b{display:block;font-size:13.5px;color:#16283c}'
+      + '.cs-cand small{display:block;font-size:11.5px;color:#8a99ad;margin-top:2px}'
+      + '.cs-cand:active{background:#f0f7ff;border-color:#0a84ff}';
     var host = document.head || document.documentElement;
     var st = document.createElement('style');
     st.textContent = css;
@@ -1741,6 +1753,236 @@
     if (!m) return null;
     try { return JSON.parse(m[0]); } catch (e) { return null; }
   }
+
+  /* ---------- 车牌查车：第三方车管所数据接口 ---------- *
+   * 车牌号本身不含车型，能返回品牌/车型/初登日期的接口都来自车管所授权库，
+   * 按次计费、需实名开通。这里做成「填一次 Key 即可用」，并支持自定义接口模板。
+   * ------------------------------------------------------ */
+  var PLATE_API_KEY = 'cc_plate_api';
+  function plateApiCfg() {
+    try { var c = JSON.parse(localStorage.getItem(PLATE_API_KEY) || '{}'); return c && typeof c === 'object' ? c : {}; } catch (e) { return {}; }
+  }
+  function plateApiSave(c) { try { localStorage.setItem(PLATE_API_KEY, JSON.stringify(c || {})); } catch (e) { } }
+  var PLATE_PROV_NAME = {
+    '京': '北京', '津': '天津', '沪': '上海', '渝': '重庆', '冀': '河北', '豫': '河南', '云': '云南',
+    '辽': '辽宁', '黑': '黑龙江', '湘': '湖南', '皖': '安徽', '鲁': '山东', '新': '新疆', '苏': '江苏',
+    '浙': '浙江', '赣': '江西', '鄂': '湖北', '桂': '广西', '甘': '甘肃', '晋': '山西', '蒙': '内蒙古',
+    '陕': '陕西', '吉': '吉林', '闽': '福建', '贵': '贵州', '粤': '广东', '青': '青海', '藏': '西藏',
+    '川': '四川', '宁': '宁夏', '琼': '海南'
+  };
+  /* 通用请求：App 内走原生（无跨域、可自定义 header），网页版走 fetch */
+  function httpReq(o) {
+    return new Promise(function (resolve, reject) {
+      var done = false;
+      function fin(ok, body) { if (done) return; done = true; ok ? resolve(body) : reject(new Error(body || 'fail')); }
+      var method = o.method || 'GET';
+      var headers = {};
+      Object.keys(o.headers || {}).forEach(function (k) { headers[k] = o.headers[k]; });
+      if (window.__ccNative) {
+        var cb = '__ccHttp' + (++_httpSeq);
+        window[cb] = function (b) { try { delete window[cb]; } catch (e) { window[cb] = undefined; } fin(!!b, b); };
+        window.__ccNative({
+          type: 'httpReq', url: o.url, method: method, headers: headers,
+          body: o.body || '', ct: o.ct || 'application/json', fields: o.fields || null, cb: cb
+        });
+        setTimeout(function () { if (window[cb]) { try { delete window[cb]; } catch (e) { window[cb] = undefined; } fin(false, 'timeout'); } }, o.timeout || 18000);
+        return;
+      }
+      var opt = { method: method, headers: headers };
+      if (o.fields) {
+        if (o.ct === 'multipart' || !o.ct) {
+          var fd = new FormData();
+          Object.keys(o.fields).forEach(function (k) { fd.append(k, o.fields[k]); });
+          opt.body = fd;
+          delete opt.headers['Content-Type'];
+        } else if (o.ct === 'application/x-www-form-urlencoded') {
+          opt.body = Object.keys(o.fields).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(o.fields[k]); }).join('&');
+        }
+      } else if (o.body) {
+        opt.body = o.body;
+      }
+      var t = setTimeout(function () { fin(false, 'timeout'); }, o.timeout || 18000);
+      fetch(o.url, opt).then(function (r) { return r.text(); })
+        .then(function (x) { clearTimeout(t); fin(true, x); },
+          function (e) { clearTimeout(t); fin(false, (e && e.message) || '网络失败'); });
+    });
+  }
+  /* 字段自动识别：不依赖某家字段名，递归找常见键 */
+  function nKey(k) { return String(k || '').toLowerCase().replace(/[_\-\s]/g, ''); }
+  function collectKV(node, out, depth) {
+    if (!node || depth > 6) return;
+    if (Object.prototype.toString.call(node) === '[object Array]') {
+      node.forEach(function (x) { collectKV(x, out, depth + 1); });
+      return;
+    }
+    if (typeof node !== 'object') return;
+    Object.keys(node).forEach(function (k) {
+      var v = node[k];
+      if (v && typeof v === 'object') { collectKV(v, out, depth + 1); return; }
+      if (v == null || v === '') return;
+      out.push([nKey(k), String(v)]);
+    });
+  }
+  function pickKV(kvs, names) {
+    for (var i = 0; i < names.length; i++) {
+      for (var j = 0; j < kvs.length; j++) { if (kvs[j][0] === names[i]) return kvs[j][1]; }
+    }
+    return '';
+  }
+  var F_BRAND = ['brand', 'brandname', 'vehiclebrand', 'autobrand', 'carbrand', '品牌', '品牌名称', '车辆品牌'];
+  var F_MODEL = ['model', 'modelname', 'vehiclename', 'vehiclemodel', 'carmodel', 'salemodel', '销售车型', '车型', '车型名称', '品牌型号'];
+  var F_DISP = ['displacement', 'enginecapacity', 'emission', '排量', '排气量'];
+  var F_REG = ['regdate', 'registerdate', 'firstregdate', 'firstregisterdate', 'recorddate', '注册日期', '初登日期', '初次登记日期', '首次登记日期'];
+  var F_VIN = ['vin', 'frameno', 'vinno', '车架号', '车辆识别代号'];
+  var F_FUEL = ['fueltype', 'fuel', '能源类型', '燃料种类'];
+  function parsePlateResp(text) {
+    var j = null;
+    try { j = JSON.parse(text); } catch (e) { return null; }
+    var kvs = []; collectKV(j, kvs, 0);
+    var brand = pickKV(kvs, F_BRAND);
+    var model = pickKV(kvs, F_MODEL);
+    var disp = pickKV(kvs, F_DISP);
+    var reg = pickKV(kvs, F_REG);
+    var vin = pickKV(kvs, F_VIN);
+    var fuel = pickKV(kvs, F_FUEL);
+    if (!brand && !model) return null;
+    var full = model;
+    if (brand && model && model.indexOf(brand) < 0) full = brand + ' ' + model;
+    return { brand: brand, model: full, disp: disp, reg: reg, vin: vin, fuel: fuel };
+  }
+  /* 各服务商请求模板：key 仅存本机，不上传 */
+  var PLATE_PROVIDERS = {
+    aliyun: {
+      name: '阿里云·快瞳车五项',
+      tip: '阿里云云市场搜「车辆五项信息查询」（快瞳科技）：0元5次体验，之后约0.4元/次，个人实名可用。填控制台里的 APPCODE。',
+      build: function (key, plate) {
+        return {
+          url: 'https://queryvehic.market.alicloudapi.com/api/ocr/queryVehicle',
+          method: 'POST', ct: 'multipart',
+          headers: { Authorization: 'APPCODE ' + key },
+          fields: { licenseNo: plate, plateType: /^[DF]/.test(plate.replace(/^[一-龥]/, '')) ? '103' : '101' }
+        };
+      }
+    },
+    jiguang: {
+      name: '极光数据·车牌查车型',
+      tip: '极光数据开放平台：注册送 10000 次免费测试额度，接口返回品牌/车系/年款/排量/配置。填 Bearer Token。',
+      build: function (key, plate) {
+        return {
+          url: 'https://api.jiguang-data.com/v1/vehicle/plate-model',
+          method: 'POST', ct: 'application/json',
+          headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plate_no: plate })
+        };
+      }
+    },
+    custom: {
+      name: '自定义接口',
+      tip: 'URL 里用 {plate} 和 {key} 占位，例如 https://api.xxx.com/query?plate={plate}&key={key}；返回 JSON 里有品牌/车型/排量/初登日期字段即可自动识别。',
+      build: function (key, plate, cfg) {
+        var url = String(cfg.url || '').replace(/\{plate\}/g, encodeURIComponent(plate)).replace(/\{key\}/g, encodeURIComponent(key));
+        if (cfg.method === 'POST') {
+          return { url: url, method: 'POST', ct: 'application/json', body: JSON.stringify({ plate: plate, key: key }), headers: {} };
+        }
+        return { url: url, method: 'GET', headers: {} };
+      }
+    }
+  };
+  /* 车牌查车：接口配置弹层 */
+  function openPlateApiCfg(onSaved) {
+    var cfg = plateApiCfg();
+    var prov = cfg.prov && PLATE_PROVIDERS[cfg.prov] ? cfg.prov : 'aliyun';
+    var keys = Object.keys(PLATE_PROVIDERS);
+    var inner = '<div class="srv-lead">车牌号只包含归属地和号牌类型，品牌/车型/排量/初登日期来自车管所授权数据库——需要接一家接口服务（按次计费，都有免费额度）。Key 只保存在本机。</div>'
+      + '<div class="srv-glabel">接口服务商</div>'
+      + '<div class="srv-frow"><select id="paProv">'
+      + keys.map(function (k) { return '<option value="' + k + '"' + (k === prov ? ' selected' : '') + '>' + esc(PLATE_PROVIDERS[k].name) + '</option>'; }).join('')
+      + '</select></div>'
+      + '<div class="srv-hint" id="paTip"></div>'
+      + '<div class="srv-glabel">Key / Token</div>'
+      + '<div class="srv-frow"><input id="paKey" placeholder="粘贴 APPCODE / Token" autocomplete="off" value="' + esc(cfg.key || '') + '"></div>'
+      + '<div id="paCustom" style="display:none">'
+      + '<div class="srv-frow"><input id="paUrl" placeholder="接口地址，用 {plate} 和 {key} 占位" value="' + esc(cfg.url || '') + '"></div>'
+      + '<div class="srv-frow"><select id="paMethod"><option value="GET"' + (cfg.method !== 'POST' ? ' selected' : '') + '>GET</option><option value="POST"' + (cfg.method === 'POST' ? ' selected' : '') + '>POST</option></select></div>'
+      + '</div>'
+      + '<button class="srv-btn" id="paSave">保存</button>'
+      + '<div class="srv-out" id="paOut" style="display:none"></div>'
+      + '<div class="srv-tip">申请示例（阿里云）：登录阿里云 → 云市场搜索「车辆五项信息查询」（快瞳科技）→ 选「0元5次」体验版下单 → 控制台「已购买的服务」里复制 APPCODE → 粘到上面保存。之后输入车牌就能直接查到品牌、车型、初登日期。</div>';
+    var ov = sheet('srvPlateApi', '车牌查车 · 接口设置', inner);
+    var tip = ov.querySelector('#paTip');
+    var provSel = ov.querySelector('#paProv');
+    var custom = ov.querySelector('#paCustom');
+    function syncProv() {
+      var p = PLATE_PROVIDERS[provSel.value];
+      tip.innerHTML = esc(p.tip || '');
+      custom.style.display = provSel.value === 'custom' ? '' : 'none';
+    }
+    syncProv();
+    provSel.onchange = syncProv;
+    ov.querySelector('#paSave').onclick = function () {
+      var k = String(ov.querySelector('#paKey').value || '').trim();
+      var c = { prov: provSel.value, key: k };
+      if (provSel.value === 'custom') {
+        c.url = String(ov.querySelector('#paUrl').value || '').trim();
+        c.method = ov.querySelector('#paMethod').value;
+        if (!c.url || c.url.indexOf('{plate}') < 0) { toastMsg('自定义地址里要包含 {plate}'); return; }
+      }
+      if (!k) { toastMsg('先填 Key / Token'); return; }
+      plateApiSave(c);
+      ov.remove();
+      toastMsg('接口已保存');
+      if (typeof onSaved === 'function') onSaved();
+    };
+  }
+
+  /* 车牌查车：调用接口 */
+  function queryPlateByApi(plate, cb) {
+    var cfg = plateApiCfg();
+    var p = PLATE_PROVIDERS[cfg.prov];
+    if (!cfg.key || !p) { cb({ err: 'noconfig' }); return; }
+    var req;
+    try { req = p.build(cfg.key, plate, cfg); } catch (e) { cb({ err: '配置有误' }); return; }
+    httpReq(req).then(function (text) {
+      var r = parsePlateResp(text);
+      if (!r) { cb({ err: '接口未返回可识别的车辆信息（可能查无此车或 Key 无效）', raw: text }); return; }
+      cb({ ok: r, raw: text });
+    }, function (e) { cb({ err: (e && e.message) || '请求失败' }); });
+  }
+
+  /* 车牌查车：无接口时的 AI 推测（明确标注推测，仅供填表起点） */
+  function aiGuessPlate(provName, plateTail, isNev, out, onPick) {
+    if (!aiOK()) { out.innerHTML = '<span style="color:#b26a00">先配置 AI 模型（免费 GLM-4-Flash 即可）</span>'; aiCfg(); return; }
+    out.innerHTML = '<span class="ai-cursor"></span>';
+    window.ccAiCall([
+      {
+        role: 'system', content: '你熟悉中国各地汽车保有量。用户只提供车牌归属地和号牌类型，你要给出该地区最常见的 3 个可能车型作为「推测候选」。' +
+          '严禁假装这是登记信息，必须是推测。只输出JSON：{"cands":[{"model":"品牌 车系 年款 排量 版本","disp":"1.6L","reg":"常见首次上牌年月YYYY-MM","note":"为什么可能（8字内）"}]}，恰好3个，不要输出JSON以外内容。'
+      },
+      { role: 'user', content: '车牌归属：' + provName + '；号牌：' + (isNev ? '新能源' : '燃油车') + '；车牌尾号：' + plateTail + '。请给3个该地区常见车型的推测候选。' }
+    ], {
+      onDelta: function () { },
+      onDone: function (full, err) {
+        if (err) { out.innerHTML = '<span style="color:#c0392b">推测失败：' + esc(err) + '</span>'; return; }
+        var j = jsonFrom(full);
+        var cands = j && j.cands && j.cands.length ? j.cands : null;
+        if (!cands) { out.innerHTML = '<span style="color:#b26a00">没拿到候选，换个模型再试，或直接用行驶证识别。</span>'; return; }
+        var h = '<div class="cs-warn">以下是 AI 推测候选，不是车管所登记信息，请点选后核对</div><div class="cs-cands">';
+        cands.slice(0, 3).forEach(function (c, i) {
+          h += '<button class="cs-cand" data-i="' + i + '"><b>' + esc(S(c.model)) + '</b>'
+            + (S(c.note) ? '<small>' + esc(S(c.note)) + '</small>' : '') + '</button>';
+        });
+        h += '</div>';
+        out.innerHTML = h;
+        out.querySelectorAll('.cs-cand').forEach(function (b) {
+          b.onclick = function () {
+            var c = cands[Number(b.getAttribute('data-i'))];
+            if (typeof onPick === 'function') onPick(c);
+          };
+        });
+      }
+    });
+  }
+
   function openCarScan() {
     var curY = new Date().getFullYear();
     var years = []; for (var yy = curY; yy >= 1990; yy--) years.push(String(yy));
@@ -1766,6 +2008,8 @@
       + '<button class="cs-nev" id="csNev" type="button">新能源</button>'
       + '</div>'
       + '<div class="srv-hint">新能源车牌 D 开头按纯电、F 开头按油电混动识别；燃油车不用管。</div>'
+      + '<div class="cs-qrow"><button class="srv-btn" id="csQuery">🔎 查车辆档案</button><button class="cs-qcfg" id="csQcfg">接口</button></div>'
+      + '<div class="srv-hint" id="csQhint"></div>'
       + '<div class="cs-sec">识别车辆信息（选一种方式）</div>'
       + '<button class="cs-way" id="csDoc"><span class="e">📷</span><span><b>行驶证识别（全自动·推荐）</b><small>拍一张行驶证主页，AI 自动填好车型排量</small></span></button>'
       + '<div class="srv-frow" style="margin-top:8px"><div class="srv-unit"><input id="csQ" placeholder="AI车型搜索：如 丰田 花冠 1.6 自动"><button class="cs-est" id="csQGo">搜索</button></div></div>'
@@ -1795,6 +2039,86 @@
       if (/^[DF]/.test(this.value) && this.value.length >= 6) nevB.classList.add('on');
     });
     nevB.onclick = function () { this.classList.toggle('on'); };
+    /* ---- 车牌查车（真数据接口 / AI 推测兜底） ---- */
+    var qhint = ov.querySelector('#csQhint');
+    function providerName() {
+      var c = plateApiCfg();
+      return (PLATE_PROVIDERS[c.prov] || {}).name || '自定义接口';
+    }
+    function refreshQhint() {
+      var c = plateApiCfg();
+      if (c.key) {
+        qhint.innerHTML = '已接入：<b>' + esc(providerName()) + '</b>，查到的品牌车型会自动填入下方';
+      } else {
+        qhint.innerHTML = '未接数据接口：车牌只含归属地/号牌类型。接一家车管所数据接口（有免费额度）就能输入车牌直出品牌车型；不想接就拍行驶证，或让 AI 推测。';
+      }
+    }
+    refreshQhint();
+    ov.querySelector('#csQcfg').onclick = function () { openPlateApiCfg(refreshQhint); };
+    function fillGuess(c) {
+      if (!c) return;
+      if (S(c.model)) ov.querySelector('#csModel').value = S(c.model);
+      if (S(c.disp)) ov.querySelector('#csDisp').value = S(c.disp);
+      var rg = S(c.reg).match(/^(\d{4})-?(\d{1,2})?/);
+      if (rg && years.indexOf(rg[1]) >= 0) {
+        ov.querySelector('#csRegY').value = rg[1];
+        if (rg[2]) ov.querySelector('#csRegM').value = parseInt(rg[2], 10) + '月';
+      }
+      if (!N(ov.querySelector('#csKm').value)) { try { ov.querySelector('#csEst').click(); } catch (e) { } }
+      toastMsg('已填入推测车型，请核对后保存');
+    }
+    function guessBtn(id, provName, no, nev) {
+      var b = ov.querySelector('#' + id);
+      if (b) b.onclick = function () { aiGuessPlate(provName, no, nev, out, fillGuess); };
+    }
+    ov.querySelector('#csQuery').onclick = function () {
+      var prov = ov.querySelector('#csProv').value;
+      var no = S(ov.querySelector('#csPlate').value).toUpperCase().trim();
+      if (!prov || no.length < 5) { toastMsg('先填完整车牌（省份 + 号码）'); return; }
+      var nev = nevB.classList.contains('on') || (/^[DF]/.test(no) && no.length >= 6);
+      var plate = prov + no;
+      var provName = PLATE_PROV_NAME[prov] || prov;
+      out.style.display = '';
+      var cfg = plateApiCfg();
+      if (!cfg.key) {
+        out.innerHTML = '<div class="cs-warn">还没接数据接口，车牌查不到品牌车型。车牌本身只含归属地和号牌类型。</div>'
+          + '<div class="cs-local">本地解析：<b>' + esc(provName) + '</b> · ' + (nev ? '新能源' : '燃油车') + ' · 号牌 ' + esc(plate) + '</div>'
+          + '<button class="srv-ghost" id="csGoCfg">⚙️ 接数据接口（约2分钟，有免费额度）</button>'
+          + '<button class="srv-ghost" id="csGuessBtn">🤖 让 AI 推测车型（仅供参考）</button>';
+        ov.querySelector('#csGoCfg').onclick = function () { openPlateApiCfg(refreshQhint); };
+        guessBtn('csGuessBtn', provName, no, nev);
+        return;
+      }
+      out.innerHTML = '<span class="srv-loading">正在查询车辆档案…</span>';
+      queryPlateByApi(plate, function (r) {
+        if (r.err) {
+          out.innerHTML = '<div class="cs-warn">查询失败：' + esc(r.err) + '</div>'
+            + (r.raw ? '<div class="cs-raw">' + esc(String(r.raw).slice(0, 300)) + '</div>' : '')
+            + '<button class="srv-ghost" id="csGuessBtn2">🤖 让 AI 推测车型（仅供参考）</button>'
+            + '<button class="srv-ghost" id="csCfgBtn2">⚙️ 检查接口设置</button>';
+          guessBtn('csGuessBtn2', provName, no, nev);
+          var cb2 = ov.querySelector('#csCfgBtn2');
+          if (cb2) cb2.onclick = function () { openPlateApiCfg(refreshQhint); };
+          return;
+        }
+        var d = r.ok;
+        if (S(d.model)) ov.querySelector('#csModel').value = S(d.model);
+        if (S(d.disp)) ov.querySelector('#csDisp').value = S(d.disp);
+        if (S(d.vin)) ov.querySelector('#csVin').value = S(d.vin);
+        var rg = S(d.reg).match(/^(\d{4})-?(\d{1,2})?/);
+        if (rg && years.indexOf(rg[1]) >= 0) {
+          ov.querySelector('#csRegY').value = rg[1];
+          if (rg[2]) ov.querySelector('#csRegM').value = parseInt(rg[2], 10) + '月';
+        }
+        if (/电/.test(S(d.fuel))) { if (/^D/.test(no)) energy = 'ev'; else energy = 'phev'; }
+        if (!N(ov.querySelector('#csKm').value) && rg) { try { ov.querySelector('#csEst').click(); } catch (e) { } }
+        out.innerHTML = '✅ 已查到：<b>' + esc(d.model || '—') + '</b>'
+          + (d.disp ? ' · 排量 ' + esc(d.disp) : '')
+          + (d.reg ? ' · 初登 ' + esc(String(d.reg).slice(0, 10)) : '')
+          + (d.vin ? '<div class="cs-raw">VIN ' + esc(d.vin) + '</div>' : '')
+          + '<div class="cs-src">数据来源：' + esc(providerName()) + '（车管所授权库）· 结果已填入下方，核对后点「完成添加」</div>';
+      });
+    };
     /* 品牌手选级联 */
     var brandSel = ov.querySelector('#csBrand'), modelSel = ov.querySelector('#csModelSel'), modelTxt = ov.querySelector('#csModelTxt');
     brandSel.onchange = function () {

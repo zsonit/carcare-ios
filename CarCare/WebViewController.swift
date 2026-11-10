@@ -567,6 +567,10 @@ extension WebViewController: WKScriptMessageHandler {
             // 公开接口（油价等）由原生代发，绕过 WebView 的跨域限制
             nativeHttpGet(url: body["url"] as? String ?? "", cb: body["cb"] as? String ?? "")
 
+        case "httpReq":
+            // 通用请求（车牌查车等第三方接口）：支持自定义 header / POST / multipart
+            nativeHttpReq(body: body)
+
         case "getLocation":
             // 定位附近加油站
             requestNativeLocation()
@@ -801,8 +805,49 @@ extension WebViewController {
         }.resume()
     }
 
-    func requestNativeLocation() {
-        CCLocationFetcher.shared.fetch { [weak self] loc, denied in
+    /// 通用 HTTP 请求：GET/POST、自定义 header、application/json、x-www-form-urlencoded、multipart/form-data
+    /// 用于车牌查车等第三方数据接口（WebView 直连会被 CORS 拦，且部分接口需要自定义鉴权头）
+    func nativeHttpReq(body: [String: Any]) {
+        let cb = body["cb"] as? String ?? ""
+        guard !cb.isEmpty, let s = body["url"] as? String, let u = URL(string: s) else { return }
+        let method = (body["method"] as? String ?? "GET").uppercased()
+        var req = URLRequest(url: u)
+        req.timeoutInterval = 15
+        req.httpMethod = method
+        req.setValue("CheGuanJia/2.8 (iOS)", forHTTPHeaderField: "User-Agent")
+        if let hs = body["headers"] as? [String: String] {
+            for (k, v) in hs { req.setValue(v, forHTTPHeaderField: k) }
+        }
+        if method != "GET" {
+            let ct = body["ct"] as? String ?? "application/json"
+            if ct == "multipart" {
+                let bd = "----CCForm" + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+                var s2 = ""
+                if let fields = body["fields"] as? [String: String] {
+                    for (k, v) in fields {
+                        s2 += "--\(bd)\r\nContent-Disposition: form-data; name=\"\(k)\"\r\n\r\n\(v)\r\n"
+                    }
+                }
+                s2 += "--\(bd)--\r\n"
+                req.setValue("multipart/form-data; boundary=\(bd)", forHTTPHeaderField: "Content-Type")
+                req.httpBody = s2.data(using: .utf8)
+            } else {
+                req.setValue(ct, forHTTPHeaderField: "Content-Type")
+                req.httpBody = (body["body"] as? String ?? "").data(using: .utf8)
+            }
+        }
+        URLSession.shared.dataTask(with: req) { [weak self] data, _, err in
+            let text = data.flatMap { String(data: $0, encoding: .utf8) } ?? (err?.localizedDescription ?? "")
+            DispatchQueue.main.async {
+                guard let self = self,
+                      let arr = try? JSONSerialization.data(withJSONObject: [text]),
+                      let json = String(data: arr, encoding: .utf8) else { return }
+                self.evaluateJS("\(cb) && \(cb)(\(json))")
+            }
+        }.resume()
+    }
+
+    func requestNativeLocation() {        CCLocationFetcher.shared.fetch { [weak self] loc, denied in
             guard let self = self else { return }
             if let c = loc {
                 let lat = String(format: "%.5f", c.coordinate.latitude)
